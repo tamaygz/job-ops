@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, normalize } from "node:path";
+import { isAbsolute, join, normalize, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { logger } from "@infra/logger";
 import { sanitizeUnknown } from "@infra/sanitize";
@@ -422,8 +422,65 @@ function replaceSharedTypstPlaceholders(template: string): string {
   );
 }
 
-function buildAdaptedTypstDocument(template: string): string {
-  return replaceSharedTypstPlaceholders(template);
+function replaceStylePlaceholders(
+  template: string,
+  document: LatexResumeDocument,
+): string {
+  const style = document.style;
+  const bodyFont = style?.typography.bodyFontFamily || "IBM Plex Serif";
+  const headingFont = style?.typography.headingFontFamily || bodyFont;
+  const primaryHex = style?.colors.primaryHex || "#202020";
+  const textHex = style?.colors.textHex || "#000000";
+  const backgroundHex = style?.colors.backgroundHex || "#ffffff";
+
+  return template
+    .replaceAll("__BODY_FONT__", JSON.stringify(bodyFont))
+    .replaceAll("__HEADING_FONT__", JSON.stringify(headingFont))
+    .replaceAll("__PRIMARY_COLOR__", `rgb("${primaryHex}")`)
+    .replaceAll("__TEXT_COLOR__", `rgb("${textHex}")`)
+    .replaceAll("__BACKGROUND_COLOR__", `rgb("${backgroundHex}")`)
+    .replaceAll("__SIDEBAR_BG_COLOR__", `rgb("${backgroundHex}")`);
+}
+
+function buildAdaptedTypstDocument(
+  document: LatexResumeDocument,
+  template: string,
+): string {
+  return replaceStylePlaceholders(
+    replaceSharedTypstPlaceholders(template),
+    document,
+  );
+}
+
+export function normalizeTypstDocumentPicturePath(
+  document: LatexResumeDocument,
+  compileCwd: string,
+): LatexResumeDocument {
+  const picture = document.picture;
+  if (!picture?.renderPath) return document;
+
+  const normalizedPath = normalize(picture.renderPath);
+  if (!isAbsolute(normalizedPath)) return document;
+
+  const relativePath = relative(compileCwd, normalizedPath);
+  if (
+    !relativePath ||
+    relativePath.startsWith("..") ||
+    isAbsolute(relativePath)
+  ) {
+    return document;
+  }
+
+  const typstPath = relativePath.split(sep).join("/");
+  if (typstPath === picture.renderPath) return document;
+
+  return {
+    ...document,
+    picture: {
+      ...picture,
+      renderPath: typstPath,
+    },
+  };
 }
 
 export function buildTypstDocument(
@@ -434,7 +491,7 @@ export function buildTypstDocument(
   const titles = document.sectionTitles ?? getLatexResumeSectionTitles();
   const pictureBlock = renderPictureBlock(document);
   const headlineBlock = document.headline
-    ? `  #text(size: ${tokens.headlineSize})[${escapeTypstText(document.headline)}] \\\n`
+    ? `  #text(font: __HEADING_FONT__, size: ${tokens.headlineSize}, fill: __TEXT_COLOR__)[${escapeTypstText(document.headline)}] \\\n`
     : "";
   const locationBlock = renderLocationBlock(document);
   const contactBlock =
@@ -500,22 +557,25 @@ export function buildTypstDocument(
     .filter(Boolean)
     .join("\n\n");
 
-  return replaceSharedTypstPlaceholders(template)
-    .replace("__PAGE_MARGIN__", tokens.pageMargin)
-    .replace("__BODY_SIZE__", tokens.bodySize)
-    .replace("__PAR_LEADING__", tokens.parLeading)
-    .replace("__SECTION_TOP__", tokens.sectionTop)
-    .replace("__SECTION_SIZE__", tokens.sectionSize)
-    .replace("__ACCENT__", tokens.accent)
-    .replace("__LINE_WIDTH__", tokens.lineWidth)
-    .replace("__SECTION_BOTTOM__", tokens.sectionBottom)
-    .replace("__NAME_SIZE__", tokens.nameSize)
-    .replace("__PICTURE_BLOCK__", pictureBlock)
-    .replace("__NAME__", escapeTypstText(document.name))
-    .replace("__HEADLINE_BLOCK__", headlineBlock)
-    .replace("__LOCATION_BLOCK__", locationBlock)
-    .replace("__CONTACT_BLOCK__", contactBlock)
-    .replace("__BODY__", body);
+  return replaceStylePlaceholders(
+    replaceSharedTypstPlaceholders(template)
+      .replace("__PAGE_MARGIN__", tokens.pageMargin)
+      .replace("__BODY_SIZE__", tokens.bodySize)
+      .replace("__PAR_LEADING__", tokens.parLeading)
+      .replace("__SECTION_TOP__", tokens.sectionTop)
+      .replace("__SECTION_SIZE__", tokens.sectionSize)
+      .replace("__ACCENT__", tokens.accent)
+      .replace("__LINE_WIDTH__", tokens.lineWidth)
+      .replace("__SECTION_BOTTOM__", tokens.sectionBottom)
+      .replace("__NAME_SIZE__", tokens.nameSize)
+      .replace("__PICTURE_BLOCK__", pictureBlock)
+      .replace("__NAME__", escapeTypstText(document.name))
+      .replace("__HEADLINE_BLOCK__", headlineBlock)
+      .replace("__LOCATION_BLOCK__", locationBlock)
+      .replace("__CONTACT_BLOCK__", contactBlock)
+      .replace("__BODY__", body),
+    document,
+  );
 }
 
 function truncateOutput(value: string): string {
@@ -612,6 +672,10 @@ export const typstResumeRenderer: ResumeRenderer = {
         document,
         tempDir,
       );
+      const typstDocument = normalizeTypstDocumentPicturePath(
+        renderableDocument,
+        tempDir,
+      );
       let typst: string;
       if (manifest.kind === "native") {
         if (!tokens) {
@@ -619,16 +683,12 @@ export const typstResumeRenderer: ResumeRenderer = {
             `Typst theme ${typstTheme} is missing native tokens.`,
           );
         }
-        typst = buildTypstDocument(renderableDocument, template, tokens);
+        typst = buildTypstDocument(typstDocument, template, tokens);
       } else {
-        typst = buildAdaptedTypstDocument(template);
+        typst = buildAdaptedTypstDocument(typstDocument, template);
       }
 
-      await writeFile(
-        resumeDataPath,
-        JSON.stringify(renderableDocument),
-        "utf8",
-      );
+      await writeFile(resumeDataPath, JSON.stringify(typstDocument), "utf8");
       await writeFile(typPath, typst, "utf8");
       await runTypst({
         cwd: tempDir,
