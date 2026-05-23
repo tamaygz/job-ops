@@ -5,13 +5,15 @@
 
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { AppError, upstreamError } from "@infra/errors";
 import { logger } from "@infra/logger";
 
 const execFileAsync = promisify(execFile);
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const CAMOUFOX_SCRIPT_PATH = resolve(
   __dirname,
   "../../../../../scripts/camoufox-fetch.mjs",
