@@ -125,7 +125,7 @@ This difference shapes everything else below.
 |---|---|---|
 | Job lifecycle states | ✓ (discovered → processing → ready → applied + skipped/expired) | ✓ (pending / applied / interviewing / offer / rejected + custom statuses) |
 | In-progress kanban board | ✓ | ✗ |
-| Gmail OAuth smart inbox | ✓ (auto-link 95–100% confidence, queue 50–94%, ignore <50%) | ✗ |
+| Gmail OAuth smart inbox | ✓ (auto-link 95–100% confidence, queue 50–94%, ignore < 50% ) | ✗ |
 | Auto stage detection from email | ✓ (recruiter screen → assessment → technical → onsite → offer → rejected) | ✗ |
 | Manual stage updates | ✓ | ✓ (terminal dashboard or flat file) |
 | Pipeline integrity checks | ✗ | ✓ (dedup, status normalisation, health check on merge) |
