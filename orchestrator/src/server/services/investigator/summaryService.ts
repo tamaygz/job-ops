@@ -193,3 +193,12 @@ export async function listSummaries(
   if (!dossier) throw notFound("Dossier not found");
   return summaryRepo.findByDossier(dossierId);
 }
+
+export async function getSummaryById(
+  summaryId: string,
+  dossierId: string,
+): Promise<InvestigatorSummary | null> {
+  const s = await summaryRepo.findById(summaryId);
+  if (!s || s.dossierId !== dossierId) return null;
+  return s;
+}

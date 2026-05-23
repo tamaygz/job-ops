@@ -1,4 +1,4 @@
-import { notFound, toAppError } from "@infra/errors";
+import { badRequest, notFound } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import * as summaryService from "@server/services/investigator/summaryService";
 import {
@@ -53,7 +53,10 @@ summariesRouter.post(
     const { dossierId } = req.params as { dossierId: string };
     const parsed = RegenerateInvestigatorSummaryInputSchema.safeParse(req.body);
     if (!parsed.success) {
-      return fail(res, toAppError(parsed.error));
+      return fail(
+        res,
+        badRequest("Invalid summary request", parsed.error.flatten()),
+      );
     }
     const summary = await summaryService.regenerateSummary(
       dossierId,
@@ -74,10 +77,12 @@ summariesRouter.patch(
     };
     const parsed = editBodySchema.safeParse(req.body);
     if (!parsed.success) {
-      return fail(res, toAppError(parsed.error));
+      return fail(
+        res,
+        badRequest("Invalid summary data", parsed.error.flatten()),
+      );
     }
-    const existing = await summaryService.listSummaries(dossierId);
-    const target = existing.find((s) => s.id === summaryId);
+    const target = await summaryService.getSummaryById(summaryId, dossierId);
     if (!target) {
       return fail(res, notFound("Summary not found"));
     }

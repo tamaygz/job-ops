@@ -12,6 +12,7 @@ const {
   investigatorPeople,
   investigatorSalaryObservations,
   investigatorSummaries,
+  investigatorResearchRuns,
   investigatorTimelineEvents,
   investigatorDossiers,
 } = schema;
@@ -114,7 +115,18 @@ export async function mergeDossiers(
       )
       .run();
 
-    // 7. Reassign timeline events.
+    // 7. Reassign research runs.
+    tx.update(investigatorResearchRuns)
+      .set({ dossierId: targetDossierId, updatedAt: now })
+      .where(
+        and(
+          eq(investigatorResearchRuns.tenantId, tenantId),
+          eq(investigatorResearchRuns.dossierId, sourceDossierId),
+        ),
+      )
+      .run();
+
+    // 8. Reassign timeline events.
     tx.update(investigatorTimelineEvents)
       .set({ dossierId: targetDossierId, updatedAt: now })
       .where(
@@ -125,7 +137,7 @@ export async function mergeDossiers(
       )
       .run();
 
-    // 8. Archive the source dossier.
+    // 9. Archive the source dossier.
     tx.update(investigatorDossiers)
       .set({ status: "archived", updatedAt: now })
       .where(
@@ -136,7 +148,7 @@ export async function mergeDossiers(
       )
       .run();
 
-    // 9. Write dossier_merged timeline event on target.
+    // 10. Write dossier_merged timeline event on target.
     tx.insert(investigatorTimelineEvents)
       .values({
         id: randomUUID(),

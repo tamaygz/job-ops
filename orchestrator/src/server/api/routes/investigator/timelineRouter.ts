@@ -1,4 +1,4 @@
-import { toAppError } from "@infra/errors";
+import { badRequest } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import * as timelineService from "@server/services/investigator/timelineService";
 import { Router } from "express";
@@ -19,7 +19,10 @@ timelineRouter.get(
 
     const parsed = querySchema.safeParse(req.query);
     if (!parsed.success) {
-      return fail(res, toAppError(parsed.error));
+      return fail(
+        res,
+        badRequest("Invalid query parameters", parsed.error.flatten()),
+      );
     }
 
     const events = await timelineService.listEvents(dossierId, {

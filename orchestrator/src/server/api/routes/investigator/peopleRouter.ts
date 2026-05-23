@@ -1,4 +1,4 @@
-import { notFound, toAppError } from "@infra/errors";
+import { badRequest, notFound } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import * as peopleRepo from "@server/repositories/investigatorPeopleRepository";
 import * as peopleSvc from "@server/services/investigator/peopleService";
@@ -27,7 +27,10 @@ peopleRouter.post(
     const { dossierId } = req.params as { dossierId: string };
     const parsed = CreateInvestigatorPersonInputSchema.safeParse(req.body);
     if (!parsed.success) {
-      return fail(res, toAppError(parsed.error));
+      return fail(
+        res,
+        badRequest("Invalid person data", parsed.error.flatten()),
+      );
     }
     const person = await peopleSvc.createPerson(dossierId, parsed.data);
     ok(res, person, 201);
@@ -44,7 +47,10 @@ peopleRouter.patch(
     };
     const parsed = UpdateInvestigatorPersonInputSchema.safeParse(req.body);
     if (!parsed.success) {
-      return fail(res, toAppError(parsed.error));
+      return fail(
+        res,
+        badRequest("Invalid person data", parsed.error.flatten()),
+      );
     }
     const existing = await peopleRepo.findById(params.personId);
     if (!existing || existing.dossierId !== params.dossierId) {

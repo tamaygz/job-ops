@@ -1,4 +1,4 @@
-import { notFound, toAppError } from "@infra/errors";
+import { badRequest, notFound } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import * as salaryService from "@server/services/investigator/salaryService";
 import {
@@ -28,7 +28,10 @@ salaryRouter.post(
       req.body,
     );
     if (!parsed.success) {
-      return fail(res, toAppError(parsed.error));
+      return fail(
+        res,
+        badRequest("Invalid salary observation data", parsed.error.flatten()),
+      );
     }
     const obs = await salaryService.createObservation(dossierId, parsed.data);
     ok(res, obs, 201);
@@ -47,7 +50,10 @@ salaryRouter.patch(
       req.body,
     );
     if (!parsed.success) {
-      return fail(res, toAppError(parsed.error));
+      return fail(
+        res,
+        badRequest("Invalid salary observation data", parsed.error.flatten()),
+      );
     }
     const existing = await salaryService.getObservation(observationId);
     if (existing.dossierId !== dossierId) {

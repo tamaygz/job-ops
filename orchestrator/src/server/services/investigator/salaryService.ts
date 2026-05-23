@@ -1,4 +1,5 @@
 import { badRequest, notFound } from "@infra/errors";
+import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as salaryRepo from "@server/repositories/investigatorSalaryRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import type {
@@ -20,6 +21,9 @@ export async function createObservation(
   dossierId: string,
   input: CreateInvestigatorSalaryObservationInput,
 ): Promise<InvestigatorSalaryObservation> {
+  const dossier = await dossierRepo.findById(dossierId);
+  if (!dossier) throw notFound(`Dossier ${dossierId} not found`);
+
   validateAmountRange(input.minAmount, input.maxAmount);
 
   const obs = await salaryRepo.create({

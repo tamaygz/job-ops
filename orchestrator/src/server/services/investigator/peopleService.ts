@@ -1,4 +1,5 @@
 import { notFound } from "@infra/errors";
+import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as peopleRepo from "@server/repositories/investigatorPeopleRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import type {
@@ -11,6 +12,9 @@ export async function createPerson(
   dossierId: string,
   input: CreateInvestigatorPersonInput,
 ): Promise<InvestigatorPerson> {
+  const dossier = await dossierRepo.findById(dossierId);
+  if (!dossier) throw notFound(`Dossier ${dossierId} not found`);
+
   const person = await peopleRepo.create({
     dossierId,
     runId: input.runId ?? null,
