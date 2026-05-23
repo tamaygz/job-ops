@@ -145,7 +145,7 @@ compareRouter.post(
     if (input.jobId) {
       try {
         const { getJobById } = await import("@server/repositories/jobs");
-        const job = getJobById(input.jobId);
+        const job = await getJobById(input.jobId);
         if (job?.jobDescription) {
           jobDescription = job.jobDescription;
         }

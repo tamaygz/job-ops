@@ -49,8 +49,8 @@ function sectionToText(
   const items = profile.sections[section as keyof typeof profile.sections];
   if (!items || !Array.isArray(items)) return "";
 
-  return items
-    .map((item: Record<string, unknown>) =>
+  return (items as unknown as Record<string, unknown>[])
+    .map((item) =>
       Object.values(item)
         .filter((v) => typeof v === "string" || Array.isArray(v))
         .map((v) => (Array.isArray(v) ? v.join(", ") : String(v)))
