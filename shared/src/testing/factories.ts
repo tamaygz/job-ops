@@ -217,6 +217,23 @@ export const createAppSettings = (
     default: getDefaultPromptTemplate("scoringPromptTemplate"),
     override: null,
   },
+  investigatorSummarySystemPromptTemplate: {
+    value:
+      "You are an expert business intelligence analyst. Return a JSON object with exactly three keys: \"summary\" (detailed markdown analysis), \"facts\" (string array of verifiable claims extracted from the sources), \"hypotheses\" (string array of plausible inferences not directly stated in the sources).",
+    default:
+      "You are an expert business intelligence analyst. Return a JSON object with exactly three keys: \"summary\" (detailed markdown analysis), \"facts\" (string array of verifiable claims extracted from the sources), \"hypotheses\" (string array of plausible inferences not directly stated in the sources).",
+    override: null,
+  },
+  investigatorSummarySourceLimit: {
+    value: 10,
+    default: 10,
+    override: null,
+  },
+  investigatorSummaryExcerptMaxChars: {
+    value: 500,
+    default: 500,
+    override: null,
+  },
   searchCities: {
     value: "",
     default: "",

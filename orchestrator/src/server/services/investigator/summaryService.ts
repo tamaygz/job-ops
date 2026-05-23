@@ -1,5 +1,6 @@
 import { notFound } from "@infra/errors";
 import { sanitizeUnknown } from "@infra/sanitize";
+import * as settingsRepo from "@server/repositories/settings";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as sourceRepo from "@server/repositories/investigatorSourceRepository";
 import * as summaryRepo from "@server/repositories/investigatorSummaryRepository";
@@ -8,6 +9,12 @@ import {
   createConfiguredLlmService,
   resolveLlmModel,
 } from "@server/services/modelSelection";
+import {
+  DEFAULT_INVESTIGATOR_SUMMARY_EXCERPT_MAX_CHARS,
+  DEFAULT_INVESTIGATOR_SUMMARY_SOURCE_LIMIT,
+  DEFAULT_INVESTIGATOR_SUMMARY_SYSTEM_PROMPT,
+  settingsRegistry,
+} from "@shared/settings-registry";
 import type {
   InvestigatorSource,
   InvestigatorSummary,
@@ -27,6 +34,12 @@ interface LlmSummaryResponse {
   facts: string[];
   hypotheses: string[];
 }
+
+type InvestigatorSummarySettings = {
+  excerptMaxChars: number;
+  sourceLimit: number;
+  systemPromptTemplate: string;
+};
 
 const SUMMARY_SCHEMA: JsonSchemaDefinition = {
   name: "investigator_summary",
@@ -50,23 +63,56 @@ const SUMMARY_SCHEMA: JsonSchemaDefinition = {
   },
 };
 
-const SYSTEM_PROMPT =
-  "You are an expert business intelligence analyst. Return a JSON object with exactly " +
-  'three keys: "summary" (detailed markdown analysis), "facts" (string array of ' +
-  'verifiable claims extracted from the sources), "hypotheses" (string array of ' +
-  "plausible inferences not directly stated in the sources).";
+const DEFAULT_SUMMARY_SETTINGS: InvestigatorSummarySettings = {
+  excerptMaxChars: DEFAULT_INVESTIGATOR_SUMMARY_EXCERPT_MAX_CHARS,
+  sourceLimit: DEFAULT_INVESTIGATOR_SUMMARY_SOURCE_LIMIT,
+  systemPromptTemplate: DEFAULT_INVESTIGATOR_SUMMARY_SYSTEM_PROMPT,
+};
+
+async function loadInvestigatorSummarySettings(): Promise<
+  InvestigatorSummarySettings
+> {
+  const [rawSystemPromptTemplate, rawSourceLimit, rawExcerptMaxChars] =
+    await Promise.all([
+      settingsRepo.getSetting("investigatorSummarySystemPromptTemplate"),
+      settingsRepo.getSetting("investigatorSummarySourceLimit"),
+      settingsRepo.getSetting("investigatorSummaryExcerptMaxChars"),
+    ]);
+
+  return {
+    systemPromptTemplate:
+      settingsRegistry.investigatorSummarySystemPromptTemplate.parse(
+        rawSystemPromptTemplate ?? undefined,
+      ) ?? DEFAULT_SUMMARY_SETTINGS.systemPromptTemplate,
+    sourceLimit:
+      settingsRegistry.investigatorSummarySourceLimit.parse(
+        rawSourceLimit ?? undefined,
+      ) ?? DEFAULT_SUMMARY_SETTINGS.sourceLimit,
+    excerptMaxChars:
+      settingsRegistry.investigatorSummaryExcerptMaxChars.parse(
+        rawExcerptMaxChars ?? undefined,
+      ) ?? DEFAULT_SUMMARY_SETTINGS.excerptMaxChars,
+  };
+}
 
 export function buildSummaryPrompt(
   companyName: string,
   companyUrl: string | null,
   sources: InvestigatorSource[],
   summaryType: SummaryType,
+  options: Pick<
+    InvestigatorSummarySettings,
+    "excerptMaxChars" | "sourceLimit"
+  > = DEFAULT_SUMMARY_SETTINGS,
 ): string {
   const typeName = summaryType.replace(/_/g, " ");
   const header = `Generate a ${typeName} for ${companyName}${companyUrl ? ` (${companyUrl})` : ""}.`;
   const excerpts = sources
-    .slice(0, 10)
-    .map((s, i) => `[${i + 1}] ${s.title}: ${s.capturedExcerpt.slice(0, 500)}`)
+    .slice(0, options.sourceLimit)
+    .map(
+      (s, i) =>
+        `[${i + 1}] ${s.title}: ${s.capturedExcerpt.slice(0, options.excerptMaxChars)}`,
+    )
     .join("\n\n");
 
   return `${header}\n\n## Sources\n${excerpts || "No sources available."}`;
@@ -84,6 +130,7 @@ export async function regenerateSummary(
   const sources = allSources.filter(
     (s) => s.reviewState === "verified" || s.reviewState === "low_confidence",
   );
+  const summarySettings = await loadInvestigatorSummarySettings();
 
   const existing = await summaryRepo.findLatest(dossierId, summaryType);
   const version = (existing?.version ?? 0) + 1;
@@ -93,6 +140,7 @@ export async function regenerateSummary(
     dossier.companyUrl,
     sources,
     summaryType,
+    summarySettings,
   );
 
   let bodyMarkdown = "(Generation failed)";
@@ -109,7 +157,7 @@ export async function regenerateSummary(
     const result = await llm.callJson<LlmSummaryResponse>({
       model,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: summarySettings.systemPromptTemplate },
         { role: "user", content: prompt },
       ],
       jsonSchema: SUMMARY_SCHEMA,

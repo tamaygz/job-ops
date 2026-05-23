@@ -1,5 +1,9 @@
 import type { Server } from "node:http";
-import type { InvestigatorSource, InvestigatorSummary } from "@shared/types";
+import type {
+  AppSettings,
+  InvestigatorSource,
+  InvestigatorSummary,
+} from "@shared/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startServer, stopServer } from "../test-utils";
 
@@ -69,7 +73,7 @@ describe.sequential("Summaries API routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sourceType: "web_page",
+        sourceType: "other_web_page",
         title: "Test Source",
         url: "https://example.com",
         capturedExcerpt: "A captured excerpt about the company.",
@@ -78,6 +82,7 @@ describe.sequential("Summaries API routes", () => {
         ...overrides,
       }),
     });
+    expect(res.status).toBe(201);
     const json = (await res.json()) as { data: InvestigatorSource };
     return json.data;
   }
@@ -90,6 +95,16 @@ describe.sequential("Summaries API routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ summaryType }),
+    });
+  }
+
+  async function updateSettings(
+    input: Record<string, unknown>,
+  ): Promise<Response> {
+    return fetch(`${baseUrl}/api/settings`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
     });
   }
 
@@ -229,6 +244,25 @@ describe.sequential("Summaries API routes", () => {
     expect(prompt).not.toContain("[11]");
     // Excerpts should be truncated to 500 chars
     expect(prompt).not.toContain("A".repeat(501));
+  });
+
+  it("persists investigator summary settings overrides", async () => {
+    const settingsRes = await updateSettings({
+      investigatorSummarySystemPromptTemplate:
+        "Use concise dossier analysis output.",
+      investigatorSummarySourceLimit: 2,
+      investigatorSummaryExcerptMaxChars: 120,
+    });
+    expect(settingsRes.status).toBe(200);
+
+    const getRes = await fetch(`${baseUrl}/api/settings`);
+    expect(getRes.status).toBe(200);
+    const { data } = (await getRes.json()) as { data: AppSettings };
+    expect(data.investigatorSummarySystemPromptTemplate.value).toBe(
+      "Use concise dossier analysis output.",
+    );
+    expect(data.investigatorSummarySourceLimit.value).toBe(2);
+    expect(data.investigatorSummaryExcerptMaxChars.value).toBe(120);
   });
 
   // ---------------------------------------------------------------------------
