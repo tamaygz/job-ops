@@ -5,7 +5,7 @@ import type {
   InvestigatorDossierListItem,
   LinkReason,
 } from "@shared/types";
-import { and, asc, desc, eq, like, sql } from "drizzle-orm";
+import { and, asc, desc, eq, like, ne, sql } from "drizzle-orm";
 import { db, schema } from "../db/index";
 import { getActiveTenantId } from "../tenancy/context";
 
@@ -61,6 +61,9 @@ export async function findAll(
   }
   if (filters.status) {
     conditions.push(eq(investigatorDossiers.status, filters.status));
+  } else {
+    // By default, exclude archived dossiers from the list.
+    conditions.push(ne(investigatorDossiers.status, "archived"));
   }
   if (filters.tag) {
     const tagPattern = `%"${filters.tag}"%`;
@@ -203,7 +206,8 @@ export async function update(
     updatedAt: now,
   };
   if (data.companyName !== undefined) setValues.companyName = data.companyName;
-  if (data.companyUrl !== undefined) setValues.companyUrl = data.companyUrl ?? null;
+  if (data.companyUrl !== undefined)
+    setValues.companyUrl = data.companyUrl ?? null;
   if (data.normalizedDomain !== undefined)
     setValues.normalizedDomain = data.normalizedDomain ?? null;
   if (data.status !== undefined) setValues.status = data.status;

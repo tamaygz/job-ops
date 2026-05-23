@@ -1,6 +1,7 @@
 import { badRequest, toAppError } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import { logger } from "@infra/logger";
+import * as dossierMergeService from "@server/services/investigator/dossierMergeService";
 import * as dossierService from "@server/services/investigator/dossierService";
 import { getActiveTenantId } from "@server/tenancy/context";
 import {
@@ -269,6 +270,46 @@ dossiersRouter.delete(
         parsed.data.jobId,
       );
       res.status(204).end();
+    } catch (err) {
+      return fail(res, toAppError(err));
+    }
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/investigator/dossiers/:dossierId/merge
+// ---------------------------------------------------------------------------
+
+const mergeBodySchema = z.object({
+  sourceDossierId: z.string().min(1).max(255),
+  confirm: z.literal(true),
+});
+
+dossiersRouter.post(
+  "/:dossierId/merge",
+  asyncRoute(async (req: Request, res: Response) => {
+    const paramsParsed = dossiersParamsSchema.safeParse(req.params);
+    if (!paramsParsed.success) {
+      return fail(
+        res,
+        badRequest("Invalid dossier id", paramsParsed.error.flatten()),
+      );
+    }
+
+    const bodyParsed = mergeBodySchema.safeParse(req.body ?? {});
+    if (!bodyParsed.success) {
+      return fail(
+        res,
+        badRequest("Invalid merge payload", bodyParsed.error.flatten()),
+      );
+    }
+
+    try {
+      const dossier = await dossierMergeService.mergeDossiers(
+        paramsParsed.data.dossierId,
+        bodyParsed.data.sourceDossierId,
+      );
+      return ok(res, dossier);
     } catch (err) {
       return fail(res, toAppError(err));
     }
