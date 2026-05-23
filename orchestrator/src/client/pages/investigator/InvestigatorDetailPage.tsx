@@ -1,3 +1,5 @@
+import { RunProgressPanel } from "@client/components/investigator/RunProgressPanel";
+import { SourceReviewPanel } from "@client/components/investigator/SourceReviewPanel";
 import { PageHeader, PageMain } from "@client/components/layout";
 import {
   useCancelRun,
@@ -499,6 +501,14 @@ export const InvestigatorDetailPage: React.FC = () => {
           ))}
         </div>
 
+        {/* Run progress banner */}
+        {dossierId && (
+          <RunProgressPanel
+            dossierId={dossierId}
+            onStartRun={() => setStartRunOpen(true)}
+          />
+        )}
+
         {/* Tabs */}
         <Tabs
           value={activeTab}
@@ -517,7 +527,7 @@ export const InvestigatorDetailPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-4">
-            <TabStub message="Sources will appear here after a research run." />
+            <SourceReviewPanel dossierId={dossierId} />
           </TabsContent>
 
           <TabsContent value="people" className="space-y-4">
