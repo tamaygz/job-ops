@@ -14,21 +14,21 @@ Implement AI-generated company summaries using the existing LLM stack: repositor
 
 ## Background / Context
 
-REQ-011: generate structured summaries (`company_overview`, `compensation_intelligence`, `hiring_signals`, `red_flags`). REQ-012: summaries contain a `bodyMarkdown` narrative plus separate `factsJson` (verifiable claims) and `hypothesesJson` (plausible inferences) arrays. REQ-013: users can view and edit `bodyMarkdown` inline; regeneration increments version but preserves previous versions. PAT-008: _"use `orchestrator/src/server/services/llm/service.ts` via its public API; do not implement a parallel AI transport."_
+REQ-011: generate structured summaries (`company_brief`, `people_brief`, `interview_angles` — per spec §4.1.7 and §4.2). REQ-012: summaries contain a `bodyMarkdown` narrative plus separate `factsJson` (verifiable claims) and `hypothesesJson` (plausible inferences) arrays. REQ-013: users can view and edit `bodyMarkdown` inline; regeneration increments version but preserves previous versions. PAT-008: _"use `orchestrator/src/server/services/llm/service.ts` via its public API; do not implement a parallel AI transport."_
 
 ## Acceptance Criteria
 
 ### Repository (`orchestrator/src/server/repositories/investigatorSummaryRepository.ts`)
-- [ ] `findByDossier(tenantId, dossierId)` — list all summaries (all versions, all types)
-- [ ] `findLatest(tenantId, dossierId, summaryType)` — returns the highest-version record for a given type
-- [ ] `findById(tenantId, summaryId)`
-- [ ] `create(tenantId, data)` — inserts; previous versions are NOT deleted
-- [ ] `update(tenantId, summaryId, data)` — partial update (for user edits)
+- [ ] `findByDossier(dossierId)` — list all summaries (all versions, all types); uses `getActiveTenantId()` internally
+- [ ] `findLatest(dossierId, summaryType)` — returns the highest-version record for a given type; scoped by tenant
+- [ ] `findById(summaryId)` — scoped by tenant
+- [ ] `create(data)` — inserts with tenant from `getActiveTenantId()`; previous versions are NOT deleted
+- [ ] `update(summaryId, data)` — partial update (for user edits); scoped by tenant
 
 ### Service (`orchestrator/src/server/services/investigator/summaryService.ts`)
-- [ ] `regenerateSummary(tenantId, dossierId, summaryType)` — fetches verified/low_confidence sources; constructs prompt including company context, verified excerpts, and requested summary type; calls `llmService.complete(prompt)` (or equivalent public method); parses response to extract `bodyMarkdown`, `factsJson[]`, `hypothesesJson[]`; increments version; persists new summary record; writes `summary_generated` timeline event; returns new summary
-- [ ] `editSummary(tenantId, summaryId, data)` — allows user edit of `bodyMarkdown` and `reviewState` only; increments version; does not re-run LLM; writes `summary_edited` timeline event
-- [ ] `listSummaries(tenantId, dossierId)` — returns all versions, ordered by `summaryType`, then `version` desc
+- [ ] `regenerateSummary(dossierId, summaryType)` — fetches verified/low_confidence sources; constructs prompt including company context, verified excerpts, and requested summary type; calls `llmService.complete(prompt)` (or equivalent public method); parses response to extract `bodyMarkdown`, `factsJson[]`, `hypothesesJson[]`; increments version; persists new summary record; writes `summary_saved` timeline event (per spec §4.1.8 event type); returns new summary
+- [ ] `editSummary(summaryId, data)` — allows user edit of `bodyMarkdown` and `reviewState` only; increments version; does not re-run LLM; writes `summary_saved` timeline event
+- [ ] `listSummaries(dossierId)` — returns all versions, ordered by `summaryType`, then `version` desc
 - [ ] LLM response sanitized before persistence: `sanitizeUnknown(parsed)` from `@infra/sanitize`
 
 ### Routes (`orchestrator/src/server/api/routes/investigator/summariesRouter.ts`)
@@ -42,7 +42,7 @@ REQ-011: generate structured summaries (`company_overview`, `compensation_intell
 - Prompt construction: use `dossier.companyName`, `dossier.industry`, `dossier.notes`, plus up to 10 most-recently-saved sources with `reviewState` in `["verified","low_confidence"]`. Truncate excerpts to 500 chars each.
 - LLM `systemPrompt`: instruct the LLM to return a JSON object with keys `summary` (markdown string), `facts` (string array), `hypotheses` (string array). Use `json_schema` output mode if the provider supports it.
 - Version field: `SELECT MAX(version) FROM investigator_summaries WHERE dossierId=? AND summaryType=? AND tenantId=?` then increment by 1.
-- Never throw if LLM parsing fails — return a `partial_failed`-style summary with `bodyMarkdown: "(Generation failed)"` and write a `summary_generation_failed` timeline event instead.
+- Never throw if LLM parsing fails — return a `partial_failed`-style summary with `bodyMarkdown: "(Generation failed)"` and write a `summary_saved` timeline event with a `{ generationFailed: true }` payload instead. Do not invent event types not listed in the spec's `TimelineEventType` enum (spec §4.1.8).
 - The `regenerate` route should be synchronous (waits for LLM response) unless the LLM call exceeds 30s — in that case a future issue can move it to the queue worker.
 
 ## Out of Scope

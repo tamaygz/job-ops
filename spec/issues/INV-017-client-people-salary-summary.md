@@ -39,7 +39,8 @@ REQ-009: people cards by person type with profile link and notes. REQ-010: salar
 
 ### Summary Panel (`orchestrator/src/client/components/investigator/SummaryPanel.tsx`)
 - [ ] Uses `useSummaries(dossierId)` — shows latest version per `summaryType`
-- [ ] Summary type tabs or sections: `company_overview`, `compensation_intelligence`, `hiring_signals`, `red_flags`
+- [ ] Summary type tabs or sections: `company_brief`, `people_brief`, `interview_angles` (per spec §4.1.7 and §4.2 enums)
+- [ ] The `interview_angles` section specifically surfaces suggested interview questions (PRD 10.10: "Suggested interview questions are visible from the dossier") — label it as "Interview Prep & Questions"
 - [ ] Each section shows:
   - `bodyMarkdown` rendered as markdown (not raw text)
   - "Facts" expandable list (items from `factsJson`)

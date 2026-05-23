@@ -19,33 +19,34 @@ REQ-001: users create dossiers from a job or from manual input. REQ-002: one dos
 ## Acceptance Criteria
 
 ### Repository (`orchestrator/src/server/repositories/investigatorDossierRepository.ts`)
-- [ ] `findByTenant(tenantId, filters)` — supports `status`, `tag`, `linkedJobId`, `hasPeople`, `stale`, `q` (name search), `sort` filter fields from spec §4.3.1
-- [ ] `findById(tenantId, dossierId)` — returns `null` for missing records (not throws)
-- [ ] `findByCanonicalKey(tenantId, canonicalCompanyKey)`
-- [ ] `create(tenantId, data)` — inserts and returns the new dossier
-- [ ] `update(tenantId, dossierId, data)` — partial update, returns updated record
-- [ ] `linkJob(tenantId, dossierId, jobId, linkReason)` — inserts into `investigator_dossier_jobs`, returns conflict-safe result
-- [ ] `unlinkJob(tenantId, dossierId, jobId)`
-- [ ] `listLinkedJobs(tenantId, dossierId)`
+- [ ] `findAll(filters)` — supports `status`, `tag`, `linkedJobId`, `hasPeople`, `stale`, `q` (name search), `sort` filter fields from spec §4.3.1; internally calls `getActiveTenantId()` for tenant scoping
+- [ ] `findById(dossierId)` — returns `null` for missing records (not throws); scoped by `getActiveTenantId()`
+- [ ] `findByCanonicalKey(canonicalCompanyKey)` — scoped by `getActiveTenantId()`
+- [ ] `create(data)` — inserts with `tenantId` from `getActiveTenantId()` and returns the new dossier
+- [ ] `update(dossierId, data)` — partial update, returns updated record; scoped by tenant
+- [ ] `linkJob(dossierId, jobId, linkReason)` — inserts into `investigator_dossier_jobs`, returns conflict-safe result
+- [ ] `unlinkJob(dossierId, jobId)` — scoped by tenant
+- [ ] `listLinkedJobs(dossierId)` — scoped by tenant
 
 ### Service (`orchestrator/src/server/services/investigator/dossierService.ts`)
-- [ ] `createDossier(tenantId, input: CreateInvestigatorDossierInput)` — normalizes canonical key, checks for existing dossier with same key, creates dossier, writes `dossier_created` timeline event
-- [ ] `createDossierFromJob(tenantId, jobId)` — seeds identity fields from job record, links job with reason `"seeded"`, writes timeline event (REQ-004)
-- [ ] `updateDossier(tenantId, dossierId, input)` — updates fields, writes `status_changed` timeline event when status changes
-- [ ] `linkJobToDossier(tenantId, dossierId, jobId, reason)` — links job, writes `job_linked` timeline event
-- [ ] `unlinkJobFromDossier(tenantId, dossierId, jobId)` — unlinks job
-- [ ] `listDossiers(tenantId, filters)` — delegates to repository with filter mapping
-- [ ] `getDossier(tenantId, dossierId)` — throws `notFound` if missing or wrong tenant
+- [ ] `createDossier(input: CreateInvestigatorDossierInput)` — normalizes canonical key, checks for existing dossier with same key, creates dossier, writes `dossier_created` timeline event
+- [ ] `createDossierFromJob(jobId)` — seeds identity fields from job record, links job with reason `"seeded"`, writes timeline event (REQ-004)
+- [ ] `updateDossier(dossierId, input)` — updates fields, writes `status_changed` timeline event when status changes
+- [ ] `linkJobToDossier(dossierId, jobId, reason)` — links job, writes `job_linked` timeline event
+- [ ] `unlinkJobFromDossier(dossierId, jobId)` — unlinks job
+- [ ] `listDossiers(filters)` — delegates to repository with filter mapping
+- [ ] `getDossier(dossierId)` — throws `notFound` if missing or wrong tenant
 - [ ] Canonical key normalization: lowercase, trim, strip punctuation (e.g. `"Acme, Inc."` → `"acme inc"`)
 
 ### Multi-tenancy
-- [ ] All repository queries include `tenantId` in the `where` clause
+- [ ] All repository queries use `getActiveTenantId()` internally in the `where` clause — callers do NOT pass tenantId
 - [ ] Cross-tenant lookup resolves as `notFound` (SEC-007)
+- [ ] Queue worker wraps execution in `runWithRequestContext({ tenantId: payload.tenantId })` before calling services
 
 ## Technical Implementation Notes
 
-- Use `getActiveTenantId()` / `requireTenantId()` from `@server/tenancy/context` — do not pass `tenantId` as a function argument into service methods that are called from route handlers.
-- Timeline event writes should call a `writeTimelineEvent(tenantId, payload)` helper — define a thin `investigatorTimelineRepository.insert()` for this (the full timeline route is INV-011, but the insert helper is needed here).
+- **Tenancy pattern (IMPORTANT):** Follow the existing codebase convention — repositories call `getActiveTenantId()` internally. Neither repositories nor services receive `tenantId` as a function parameter. The queue worker (INV-006) must call `runWithRequestContext({ tenantId: payload.tenantId })` before invoking service methods so that `getActiveTenantId()` resolves correctly inside the async context. This is the same pattern used by the existing `auto-pdf-regeneration` worker.
+- Timeline event writes should call a `writeTimelineEvent(payload)` helper — define a thin `investigatorTimelineRepository.insert()` for this (the full timeline route is INV-011, but the insert helper is needed here).
 - `stale` filter: a dossier is stale if `lastResearchedAt` is older than 30 days or is null.
 - The `hasPeople` filter: a subquery count on `investigator_people` where `dossierId` matches and `tenantId` matches.
 - Error helpers come from `@infra/errors`: use `notFound`, `conflict` (duplicate canonical key).

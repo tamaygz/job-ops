@@ -167,6 +167,7 @@ Implementation consequences:
 - Thin repositories should not embed LLM calls, merge heuristics, or source-fetch logic.
 - Services should own unit-of-work orchestration such as seeding from jobs, writing timeline events, and kicking off queued runs.
 - Any new in-memory state or dedupe maps must be keyed by tenant, following the existing multi-tenant rule.
+- **Tenant context pattern:** Repositories and services do NOT receive `tenantId` as a function parameter. Instead, they call `getActiveTenantId()` (from `@server/tenancy/context`) internally, which reads tenant context from `AsyncLocalStorage`. Queue workers must call `runWithRequestContext({ tenantId: payload.tenantId })` before invoking services/repositories. This matches the established pattern in `jobs.ts` repository and `auto-pdf-regeneration.ts` worker.
 
 ## 4. Interfaces & Data Contracts
 
@@ -556,8 +557,9 @@ interface InvestigatorResearchRunJobPayload {
 
 Queue dedupe guidance:
 
-- Dedupe keys should include tenant and dossier identity, such as `tenantId:dossierId:runKind`.
+- Dedupe keys should use the existing `EnqueueJobOptions.dedupeKey` option (not a field inside the payload). Pass `dedupeKey: "${tenantId}:${dossierId}:${runKind}"` when calling `queue.enqueue(...)`.
 - Queue payloads must never omit `tenantId`.
+- The queue worker must call `runWithRequestContext({ tenantId: payload.tenantId })` before executing service logic so that `getActiveTenantId()` resolves correctly in repositories and services.
 
 ### 4.5 UI State Model
 

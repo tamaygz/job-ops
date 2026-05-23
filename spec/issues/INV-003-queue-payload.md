@@ -21,7 +21,7 @@ NFR-007: _"Long-running run orchestration shall use the existing queue, service,
 - [ ] `"investigator_research_run"` is added to `JOB_QUEUE_NAMES` const array
 - [ ] `InvestigatorResearchRunJobPayload` interface is defined and registered under `JobQueuePayloadByName["investigator_research_run"]`
 - [ ] Payload includes at minimum: `tenantId: string`, `dossierId: string`, `runId: string`, `runKind: RunKind`
-- [ ] Payload includes `dedupKey: string` (value: `"{tenantId}:{dossierId}:{runKind}"`) to allow the queue consumer to skip duplicate queued runs per dossier+kind
+- [ ] Deduplication is achieved via the existing `EnqueueJobOptions.dedupeKey` option (value: `"{tenantId}:{dossierId}:{runKind}"`), NOT as a field in the payload. The `dedupeKey` is passed as the `options` argument when calling `queue.enqueue(...)`. This follows the existing `EnqueueJobOptions` interface contract in `job-queue.ts`.
 - [ ] No existing queue names or payload types are modified
 - [ ] `npm --workspace orchestrator run check:types` passes
 
@@ -29,7 +29,7 @@ NFR-007: _"Long-running run orchestration shall use the existing queue, service,
 
 - Import `RunKind` from `@shared/types/investigator` (defined in INV-001).
 - Follow the exact shape of existing payload definitions in `job-queue.ts` — `tenantId` is required in every payload per the multi-tenancy rule.
-- The `dedupKey` field supports the guidance in spec §4.4.2 to prevent duplicate in-flight runs per dossier+kind. The queue consumer (INV-006) will use this for deduplication.
+- Deduplication uses the existing `EnqueueJobOptions.dedupeKey` option, which the `MemoryJobQueue` implementation already supports. The caller (INV-006 `runService.startRun`) passes `{ dedupeKey: \`${tenantId}:${dossierId}:${runKind}\` }` as the third argument to `queue.enqueue(...)`.
 - Do not implement the queue consumer worker here — that is scoped to INV-006.
 
 ## Out of Scope

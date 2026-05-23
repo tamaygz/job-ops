@@ -19,17 +19,18 @@ REQ-005: user-initiated runs with kinds `company_brief`, `people_scan`, `dossier
 ## Acceptance Criteria
 
 ### Repository (`orchestrator/src/server/repositories/investigatorRunRepository.ts`)
-- [ ] `create(tenantId, data)` — creates run with status `"queued"`
-- [ ] `findByDossier(tenantId, dossierId)` — list runs ordered by `createdAt` desc
-- [ ] `findById(tenantId, runId)`
-- [ ] `updateStatus(tenantId, runId, status, extra?)` — updates `status`, `startedAt`, `completedAt`, `errorCode`, `errorMessage` as appropriate
+- [ ] `create(data)` — creates run with status `"queued"`; uses `getActiveTenantId()` for tenant scoping
+- [ ] `findByDossier(dossierId)` — list runs ordered by `createdAt` desc; scoped by tenant internally
+- [ ] `findById(runId)` — scoped by tenant internally
+- [ ] `updateStatus(runId, status, extra?)` — updates `status`, `startedAt`, `completedAt`, `errorCode`, `errorMessage` as appropriate; scoped by tenant
 
 ### Service (`orchestrator/src/server/services/investigator/runService.ts`)
-- [ ] `startRun(tenantId, dossierId, input: StartInvestigatorRunInput)` — validates no run with same `(dossierId, runKind)` is already `queued` or `running` (dedupe); creates run record; enqueues `investigator_research_run` job via `JobQueue`; writes `run_started` timeline event; returns created run
-- [ ] `cancelRun(tenantId, dossierId, runId)` — sets status to `"cancelled"` if run is `queued` or `running`; writes timeline event; throws `conflict` if run is already terminal
+- [ ] `startRun(dossierId, input: StartInvestigatorRunInput)` — validates no run with same `(dossierId, runKind)` is already `queued` or `running` (dedupe); creates run record; enqueues `investigator_research_run` job via `JobQueue`; writes `run_started` timeline event; returns created run
+- [ ] `cancelRun(dossierId, runId)` — sets status to `"cancelled"` if run is `queued` or `running`; writes timeline event; throws `conflict` if run is already terminal
 
 ### Queue Worker (`orchestrator/src/server/services/investigator/runWorker.ts`)
 - [ ] Registered as the consumer for `"investigator_research_run"` jobs
+- [ ] **Sets up request context** via `runWithRequestContext({ tenantId: payload.tenantId, pipelineRunId: payload.runId })` before executing — this is how all downstream `getActiveTenantId()` calls resolve correctly (same pattern as `auto-pdf-regeneration.ts`)
 - [ ] Fetches run record and dossier; sets status to `"running"`
 - [ ] Executes phase steps: source fetch → people extraction → salary extraction → summary generation (stubs for v1 integration — actual content generation is wired up in INV-008/INV-009/INV-010/INV-012)
 - [ ] On partial failure: saves completed phases, sets status to `"partial_failed"`, stores sanitized error
@@ -38,7 +39,8 @@ REQ-005: user-initiated runs with kinds `company_brief`, `people_scan`, `dossier
 - [ ] Writes `run_completed` / `run_partial_failed` / `run_failed` timeline events
 
 ### Multi-tenancy & error handling
-- [ ] All queries include `tenantId`
+- [ ] All repository queries use `getActiveTenantId()` internally — no `tenantId` function parameter
+- [ ] Queue worker sets up request context via `runWithRequestContext({ tenantId: payload.tenantId })` before calling any service/repository (ensures `getActiveTenantId()` resolves correctly)
 - [ ] Error messages stored in DB are sanitized via `sanitizeError()` from `@infra/sanitize` (SEC-004)
 - [ ] Raw upstream bodies are never written to `errorMessage`
 
@@ -56,6 +58,7 @@ REQ-005: user-initiated runs with kinds `company_brief`, `people_scan`, `dossier
 - Actual source/people/salary extraction logic (INV-008, INV-009, INV-010)
 - SSE progress streaming (INV-007)
 - LLM summarization (INV-012)
+- Reuse of ready-panel Google search link patterns for guided people/company discovery (GUD-001 — future enhancement to the worker step functions once v1 wiring is stable)
 
 ## Definition of Done
 

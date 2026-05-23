@@ -19,18 +19,18 @@ REQ-010: store and view salary observations per dossier including role, geograph
 ## Acceptance Criteria
 
 ### Repository (`orchestrator/src/server/repositories/investigatorSalaryRepository.ts`)
-- [ ] `findByDossier(tenantId, dossierId)` — list ordered by `observedAt` desc
-- [ ] `findById(tenantId, observationId)`
-- [ ] `create(tenantId, data)`
-- [ ] `update(tenantId, observationId, data)` — partial update
-- [ ] `delete(tenantId, observationId)`
+- [ ] `findByDossier(dossierId)` — list ordered by `observedAt` desc; uses `getActiveTenantId()` internally
+- [ ] `findById(observationId)` — scoped by tenant internally
+- [ ] `create(data)` — inserts with tenant from `getActiveTenantId()`
+- [ ] `update(observationId, data)` — partial update; scoped by tenant
+- [ ] `delete(observationId)` — scoped by tenant
 
 ### Service (`orchestrator/src/server/services/investigator/salaryService.ts`)
-- [ ] `createObservation(tenantId, dossierId, input)` — validates `minAmount ≤ maxAmount` when both are present (throws `400 INVALID_REQUEST` otherwise); creates record; writes `salary_observed` timeline event
-- [ ] `updateObservation(tenantId, observationId, data)` — validates amount range if both present; updates record
-- [ ] `deleteObservation(tenantId, observationId)` — deletes; no timeline event required
-- [ ] `listObservations(tenantId, dossierId)` — delegates to repository
-- [ ] `getObservation(tenantId, observationId)` — throws `notFound` if missing or wrong tenant
+- [ ] `createObservation(dossierId, input)` — validates `minAmount ≤ maxAmount` when both are present (throws `400 INVALID_REQUEST` otherwise); creates record; writes `salary_saved` timeline event (per spec §4.1.8 event type)
+- [ ] `updateObservation(observationId, data)` — validates amount range if both present; updates record
+- [ ] `deleteObservation(observationId)` — deletes; no timeline event required
+- [ ] `listObservations(dossierId)` — delegates to repository
+- [ ] `getObservation(observationId)` — throws `notFound` if missing or wrong tenant
 
 ### Routes (`orchestrator/src/server/api/routes/investigator/salaryRouter.ts`)
 - [ ] `GET /api/investigator/dossiers/:dossierId/salary-observations`

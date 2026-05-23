@@ -19,18 +19,18 @@ REQ-009: structured people records with person type, role, profile URL, notes, s
 ## Acceptance Criteria
 
 ### Repository (`orchestrator/src/server/repositories/investigatorPeopleRepository.ts`)
-- [ ] `findByDossier(tenantId, dossierId)` — list people ordered by `personType`, then `fullName`
-- [ ] `findById(tenantId, personId)`
-- [ ] `create(tenantId, data)`
-- [ ] `update(tenantId, personId, data)` — partial update
-- [ ] `delete(tenantId, personId)`
+- [ ] `findByDossier(dossierId)` — list people ordered by `personType`, then `fullName`; uses `getActiveTenantId()` internally
+- [ ] `findById(personId)` — scoped by tenant internally
+- [ ] `create(data)` — inserts with tenant from `getActiveTenantId()`
+- [ ] `update(personId, data)` — partial update; scoped by tenant
+- [ ] `delete(personId)` — scoped by tenant
 
 ### Service (`orchestrator/src/server/services/investigator/peopleService.ts`)
-- [ ] `createPerson(tenantId, dossierId, input: CreateInvestigatorPersonInput)` — creates person; writes `person_saved` timeline event
-- [ ] `updatePerson(tenantId, personId, data)` — updates; writes `person_saved` timeline event
-- [ ] `deletePerson(tenantId, personId)` — deletes; no timeline event required
-- [ ] `listPeople(tenantId, dossierId)` — delegates to repository
-- [ ] `getPerson(tenantId, personId)` — throws `notFound` if missing or wrong tenant
+- [ ] `createPerson(dossierId, input: CreateInvestigatorPersonInput)` — creates person; writes `person_saved` timeline event
+- [ ] `updatePerson(personId, data)` — updates; writes `person_saved` timeline event
+- [ ] `deletePerson(personId)` — deletes; no timeline event required
+- [ ] `listPeople(dossierId)` — delegates to repository
+- [ ] `getPerson(personId)` — throws `notFound` if missing or wrong tenant
 
 ### Routes (`orchestrator/src/server/api/routes/investigator/peopleRouter.ts`)
 - [ ] `GET /api/investigator/dossiers/:dossierId/people`

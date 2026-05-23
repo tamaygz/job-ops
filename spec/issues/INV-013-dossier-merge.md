@@ -19,7 +19,7 @@ REQ-020: users can merge two dossiers when they find duplicates. The operation m
 ## Acceptance Criteria
 
 ### Service (`orchestrator/src/server/services/investigator/dossierMergeService.ts`)
-- [ ] `mergeDossiers(tenantId, targetDossierId, sourceDossierId)` — validates both dossiers exist and belong to tenant; returns `conflict` if `targetDossierId === sourceDossierId`; reassigns all rows in `investigator_dossier_jobs`, `investigator_sources`, `investigator_people`, `investigator_salary_observations`, `investigator_summaries`, `investigator_timeline_events` from source to target (`dossierId = targetDossierId`); updates `targetDossier.linkedJobCount` if denormalized; sets source dossier `status = "archived"` and `archivedAt`; writes `dossier_merged` timeline event on target (payload includes `{ sourceDossierId, sourceCompanyName }`)
+- [ ] `mergeDossiers(targetDossierId, sourceDossierId)` — validates both dossiers exist and belong to tenant (via `getActiveTenantId()` internally); returns `conflict` if `targetDossierId === sourceDossierId`; reassigns all rows in `investigator_dossier_jobs`, `investigator_sources`, `investigator_people`, `investigator_salary_observations`, `investigator_summaries`, `investigator_timeline_events` from source to target (`dossierId = targetDossierId`); updates `targetDossier.linkedJobCount` if denormalized; sets source dossier `status = "archived"` and `archivedAt`; writes `dossier_merged` timeline event on target (payload includes `{ sourceDossierId, sourceCompanyName }`)
 - [ ] Operation is atomic (single Drizzle transaction)
 - [ ] After merge: source dossier is accessible via GET (shows `archived` status) but excluded from default list results
 - [ ] Throws `notFound` if either dossier is inaccessible or wrong tenant

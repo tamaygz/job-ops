@@ -19,13 +19,13 @@ REQ-014: a chronological timeline of all activity (run starts, status changes, s
 ## Acceptance Criteria
 
 ### Repository (`orchestrator/src/server/repositories/investigatorTimelineRepository.ts`)
-- [ ] `insert(tenantId, dossierId, eventType, payload, occurredAt?)` — inserts event; `occurredAt` defaults to `now()`; `id` is a generated CUID or UUID
-- [ ] `findByDossier(tenantId, dossierId, opts?)` — paginatable list; ordered `occurredAt` desc by default; optional `eventType` filter
+- [ ] `insert(dossierId, eventType, payload, occurredAt?)` — inserts event; `occurredAt` defaults to `now()`; `id` is a generated CUID or UUID; uses `getActiveTenantId()` internally for `tenantId`
+- [ ] `findByDossier(dossierId, opts?)` — paginatable list; ordered `occurredAt` desc by default; optional `eventType` filter; scoped by tenant internally
 - [ ] **No update or delete methods** (GUD-002)
 - [ ] Repository is re-exported as `timelineRepository` and imported by all other services (not duplicated across files)
 
 ### Service (`orchestrator/src/server/services/investigator/timelineService.ts`)
-- [ ] `writeEvent(tenantId, dossierId, eventType, payload)` — thin wrapper around `timelineRepository.insert()`; sanitizes `payload` via `sanitizeUnknown()` from `@infra/sanitize` before write; throws `notFound` if dossier does not belong to tenant
+- [ ] `writeEvent(dossierId, eventType, payload)` — thin wrapper around `timelineRepository.insert()`; sanitizes `payload` via `sanitizeUnknown()` from `@infra/sanitize` before write; throws `notFound` if dossier does not belong to tenant
 - [ ] All other investigator services (dossier, run, source, people, salary, summary) import `writeEvent` from here — they do **not** call the repository directly
 
 ### Route (`orchestrator/src/server/api/routes/investigator/timelineRouter.ts`)

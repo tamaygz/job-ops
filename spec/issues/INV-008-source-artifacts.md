@@ -19,18 +19,18 @@ REQ-007: persist source artifacts with URL, type, excerpt, review state, and ann
 ## Acceptance Criteria
 
 ### Repository (`orchestrator/src/server/repositories/investigatorSourceRepository.ts`)
-- [ ] `findByDossier(tenantId, dossierId, opts?)` — list sources, optional filter by `runId`, `reviewState`, `sourceType`
-- [ ] `findById(tenantId, sourceId)`
-- [ ] `findByContentHash(tenantId, dossierId, contentHash)` — returns existing source if hash matches
-- [ ] `create(tenantId, data)`
-- [ ] `update(tenantId, sourceId, data)` — partial update
-- [ ] `delete(tenantId, sourceId)`
+- [ ] `findByDossier(dossierId, opts?)` — list sources, optional filter by `runId`, `reviewState`, `sourceType`; uses `getActiveTenantId()` internally
+- [ ] `findById(sourceId)` — scoped by tenant internally
+- [ ] `findByContentHash(dossierId, contentHash)` — returns existing source if hash matches; scoped by tenant
+- [ ] `create(data)` — inserts with tenant from `getActiveTenantId()`
+- [ ] `update(sourceId, data)` — partial update; scoped by tenant
+- [ ] `delete(sourceId)` — scoped by tenant
 
 ### Service (`orchestrator/src/server/services/investigator/sourceService.ts`)
-- [ ] `saveSource(tenantId, dossierId, input: CreateInvestigatorSourceInput)` — computes `contentHash` (SHA-256 of `capturedExcerpt`) if not provided; checks for duplicate by hash; creates source; writes `source_saved` timeline event
-- [ ] `updateSource(tenantId, sourceId, data)` — updates fields; if `reviewState` changes, writes `source_reviewed` timeline event
-- [ ] `deleteSource(tenantId, sourceId)` — deletes source; no timeline event required
-- [ ] `listSources(tenantId, dossierId, filters?)` — delegates to repository
+- [ ] `saveSource(dossierId, input: CreateInvestigatorSourceInput)` — computes `contentHash` (SHA-256 of `capturedExcerpt`) if not provided; checks for duplicate by hash; creates source; writes `source_saved` timeline event
+- [ ] `updateSource(sourceId, data)` — updates fields; if `reviewState` changes, writes `source_reviewed` timeline event
+- [ ] `deleteSource(sourceId)` — deletes source; no timeline event required
+- [ ] `listSources(dossierId, filters?)` — delegates to repository
 
 ### Routes (`orchestrator/src/server/api/routes/investigator/sourcesRouter.ts`)
 - [ ] `GET /api/investigator/dossiers/:dossierId/sources` — list sources; optional `reviewState`, `sourceType` query params

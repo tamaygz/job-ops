@@ -30,7 +30,7 @@ Per `spec-design-investigator-feature.md` §4.1.9 and NFR-006: _"Public investig
 - Follow the existing pattern in `shared/src/types/` — look at `job.ts` or `settings.ts` for the export style.
 - Enum values come verbatim from spec §4.2. Do not add values not listed there.
 - `InvestigatorDossierListItem` is a projection of `InvestigatorDossier` (no heavy nested arrays) — include: `id`, `tenantId`, `companyName`, `status`, `tags`, `lastResearchedAt`, `linkedJobCount`, `createdAt`.
-- `factsJson` and `hypothesesJson` on `InvestigatorSummary` should type as `string[]` until the summary content shape is finalized.
+- `factsJson` and `hypothesesJson` on `InvestigatorSummary` should type as `Array<{ statement: string; sourceIds: string[] }>` to support source traceability from the start (per spec §9.3 example and AC-004). This enables the UI to link facts/hypotheses back to saved source artifacts.
 - Zod schemas must use `.strict()` on create inputs to catch unexpected fields early.
 
 ## Out of Scope

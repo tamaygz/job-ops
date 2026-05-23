@@ -45,6 +45,7 @@ PAT-004: all route handlers must use `asyncRoute()` + `ok()` / `fail()` from `@i
 - Dossier merge route (INV-013)
 - Research run routes (INV-007)
 - SSE (INV-007)
+- Dossier hard-delete route: the spec intentionally omits a DELETE endpoint for dossiers — archiving (status change via PATCH) is the intended workflow per PRD. If a future hard-delete is added, it must cascade-delete all child records (runs, sources, people, salary, summaries, timeline events).
 
 ## Definition of Done
 
