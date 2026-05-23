@@ -15,6 +15,7 @@ import { peopleRouter } from "./peopleRouter";
 import { runsRouter } from "./runsRouter";
 import { salaryRouter } from "./salaryRouter";
 import { sourcesRouter } from "./sourcesRouter";
+import { summariesRouter } from "./summariesRouter";
 import { timelineRouter } from "./timelineRouter";
 
 export const dossiersRouter = Router();
@@ -297,6 +298,12 @@ dossiersRouter.use("/:dossierId/people", peopleRouter);
 // ---------------------------------------------------------------------------
 
 dossiersRouter.use("/:dossierId/salary-observations", salaryRouter);
+
+// ---------------------------------------------------------------------------
+// Sub-router: /api/investigator/dossiers/:dossierId/summaries
+// ---------------------------------------------------------------------------
+
+dossiersRouter.use("/:dossierId/summaries", summariesRouter);
 
 // ---------------------------------------------------------------------------
 // Sub-router: /api/investigator/dossiers/:dossierId/timeline
