@@ -1,17 +1,17 @@
 ---
 id: post-application-tracking
 title: Post-Application Tracking
-description: Gmail and O365-based tracking inbox, smart routing, and review workflow.
+description: Gmail, O365, and IMAP-based tracking inbox, smart routing, and review workflow.
 sidebar_position: 3
 ---
 
-The Tracking Inbox monitors Gmail and O365 mailboxes for job-application responses and updates timelines.
+The Tracking Inbox monitors Gmail, O365, and IMAP mailboxes for job-application responses and updates timelines.
 
 ![Tracking Inbox review queue](/img/features/tracking-inbox.png)
 
 ## Overview
 
-1. Scans Gmail/O365 for recruitment-related emails
+1. Scans Gmail/O365/IMAP for recruitment-related emails
 2. Matches emails to tracked jobs using AI
 3. Updates timeline/state when confidence is high
 4. Queues uncertain matches for manual review
@@ -53,6 +53,7 @@ Detailed setup guide:
 
 ### O365 OAuth
 
+
 Set:
 
 ```bash
@@ -68,11 +69,25 @@ Detailed setup guide:
 
 - [O365 OAuth Setup (Entra ID / Azure)](/docs/next/getting-started/o365-oauth-setup)
 
-## Using the inbox
+### IMAP (any provider)
 
-- Review pending items in Tracking Inbox
-- Approve to link/update timeline
-- Ignore to mark non-relevant
+IMAP works with Gmail, Outlook, Yahoo, iCloud, and any IMAP-compatible email:
+
+1. Open **Tracking Inbox**.
+2. Select provider **imap**.
+3. Click **Connect IMAP**.
+4. Enter your IMAP server settings:
+   - Host: e.g., `imap.gmail.com`, `outlook.office365.com`
+   - Port: Usually `993` (IMAP over SSL)
+   - User: Your email address
+   - Password: Your password or app-specific password
+   - TLS: Enable (recommended)
+
+Detailed setup guide:
+
+- [IMAP Email Setup](/docs/next/getting-started/imap-setup)
+
+## Using the inbox
 
 ## Job emails tab
 
@@ -95,6 +110,7 @@ Confidence interpretation:
 
 - Gmail scope: `https://www.googleapis.com/auth/gmail.readonly`
 - O365 scope: `offline_access Mail.Read User.Read`
+- IMAP: Direct credential authentication (passwords stored encrypted)
 - Minimal metadata sent for matching
 - Email data stays local in your instance
 
@@ -114,7 +130,8 @@ Confidence interpretation:
 
 ## Common issues
 
-- No refresh token: disconnect and reconnect Gmail.
+- No refresh token: disconnect and reconnect Gmail/O365.
 - O365 token/tenant errors: confirm Entra app permissions and `O365_OAUTH_TENANT_ID`.
-- Emails not appearing: check runs, OAuth config, and recruitment subjects.
+- IMAP authentication failed: verify credentials, enable app passwords if 2FA is enabled.
+- Emails not appearing: check runs, OAuth/IMAP config, and recruitment subjects.
 - Wrong matches: expected in lower-confidence buckets; use manual review.

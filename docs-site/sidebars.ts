@@ -10,11 +10,7 @@ const sidebars: SidebarsConfig = {
         "getting-started/self-hosting",
         "getting-started/gmail-oauth-setup",
         "getting-started/o365-oauth-setup",
-      ],
-    },
-    {
-      type: "category",
-      label: "Workflows",
+        "getting-started/imap-setup",
       items: [
         "workflows/find-jobs-and-apply-workflow",
         "workflows/post-application-workflow",
@@ -67,6 +63,7 @@ const sidebars: SidebarsConfig = {
         "getting-started/self-hosting",
         "getting-started/gmail-oauth-setup",
         "getting-started/o365-oauth-setup",
+        "getting-started/imap-setup",
         "getting-started/database-backups",
         "troubleshooting/common-problems",
       ],
