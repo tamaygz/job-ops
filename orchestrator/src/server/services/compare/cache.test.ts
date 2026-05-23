@@ -7,7 +7,9 @@ describe("compare/cache", () => {
   });
 
   it("returns null for uncached keys", () => {
-    const result = getCached<string>(buildCacheKey("t1", "https://example.com"));
+    const result = getCached<string>(
+      buildCacheKey("t1", "https://example.com"),
+    );
     expect(result).toBeNull();
   });
 

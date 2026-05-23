@@ -17,6 +17,7 @@ import type {
   SectionEvaluation,
   SectionVerdict,
 } from "@shared/types";
+import { LINKEDIN_PROFILE_URL_PATTERN } from "@shared/types";
 import {
   AlertTriangle,
   Check,
@@ -50,9 +51,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-
-const LINKEDIN_URL_PATTERN =
-  /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?$/;
 
 const SECTION_LABELS: Record<CompareSectionKey, string> = {
   basics: "Profile Summary",
@@ -638,7 +636,7 @@ export const ComparePage: React.FC = () => {
       setUrlError("Please enter a LinkedIn profile URL");
       return;
     }
-    if (!LINKEDIN_URL_PATTERN.test(trimmed)) {
+    if (!LINKEDIN_PROFILE_URL_PATTERN.test(trimmed)) {
       setUrlError(
         "Please enter a valid LinkedIn profile URL (https://www.linkedin.com/in/...)",
       );

@@ -6,6 +6,7 @@
  * - "copy_rewrite": Copy then LLM rewrite in the user's writing style
  */
 
+import { randomUUID } from "node:crypto";
 import { logger } from "@infra/logger";
 import {
   requireCurrentDesignResume,
@@ -140,7 +141,7 @@ function buildSectionPatchOperations(
 
   if (section === "experience") {
     const items = otherProfile.sections.experience.map((exp) => ({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       visible: true,
       company: exp.company,
       position: exp.position,
@@ -160,7 +161,7 @@ function buildSectionPatchOperations(
 
   if (section === "education") {
     const items = otherProfile.sections.education.map((edu) => ({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       visible: true,
       institution: edu.school,
       studyType: edu.degree,
@@ -181,7 +182,7 @@ function buildSectionPatchOperations(
 
   if (section === "skills") {
     const items = otherProfile.sections.skills.map((skill) => ({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       visible: true,
       name: skill.name,
       proficiency: "",

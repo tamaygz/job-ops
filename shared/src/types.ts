@@ -7,6 +7,7 @@
 
 export * from "./types/api";
 export * from "./types/chat";
+export * from "./types/compare";
 export * from "./types/design-resume";
 export * from "./types/design-resume-jake";
 export * from "./types/extractors";

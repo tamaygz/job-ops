@@ -67,6 +67,10 @@ export interface CompareAwardItem {
   date: string;
 }
 
+/** Regex pattern for validating LinkedIn profile URLs */
+export const LINKEDIN_PROFILE_URL_PATTERN =
+  /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?$/;
+
 /** Keys that can be compared between profiles */
 export type CompareSectionKey =
   | "basics"

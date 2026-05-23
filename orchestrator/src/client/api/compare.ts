@@ -40,7 +40,7 @@ export async function streamEvaluate(
       otherProfileUrl,
       jobId: jobId ?? undefined,
       stream: true,
-    } as Parameters<typeof streamSseEvents>[1],
+    },
     {
       onEvent: handlers.onEvent,
       signal: handlers.signal,

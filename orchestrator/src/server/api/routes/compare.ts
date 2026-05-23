@@ -25,13 +25,11 @@ import type {
   CompareSectionKey,
   NormalisedCompareProfile,
 } from "@shared/types";
+import { LINKEDIN_PROFILE_URL_PATTERN } from "@shared/types";
 import { Router } from "express";
 import { z } from "zod";
 
 export const compareRouter = Router();
-
-const LINKEDIN_URL_PATTERN =
-  /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?$/;
 
 const VALID_SECTIONS: CompareSectionKey[] = [
   "basics",
@@ -86,7 +84,7 @@ compareRouter.post(
     const input = scrapeSchema.parse(req.body);
     const url = canonicaliseUrl(input.url);
 
-    if (!LINKEDIN_URL_PATTERN.test(url)) {
+    if (!LINKEDIN_PROFILE_URL_PATTERN.test(url)) {
       fail(
         res,
         badRequest(
@@ -151,9 +149,10 @@ compareRouter.post(
         if (job?.jobDescription) {
           jobDescription = job.jobDescription;
         }
-      } catch {
+      } catch (error) {
         logger.warn("Could not load job for compare evaluation", {
           jobId: input.jobId,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
