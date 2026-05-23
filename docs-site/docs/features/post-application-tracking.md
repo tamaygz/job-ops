@@ -1,17 +1,17 @@
 ---
 id: post-application-tracking
 title: Post-Application Tracking
-description: Gmail, O365, and IMAP-based tracking inbox, smart routing, and review workflow.
+description: Gmail and IMAP-based tracking inbox, smart routing, and review workflow.
 sidebar_position: 3
 ---
 
-The Tracking Inbox monitors Gmail, O365, and IMAP mailboxes for job-application responses and updates timelines.
+The Tracking Inbox monitors Gmail and IMAP mailboxes for job-application responses and updates timelines.
 
 ![Tracking Inbox review queue](/img/features/tracking-inbox.png)
 
 ## Overview
 
-1. Scans Gmail/O365/IMAP for recruitment-related emails
+1. Scans Gmail/IMAP for recruitment-related emails
 2. Matches emails to tracked jobs using AI
 3. Updates timeline/state when confidence is high
 4. Queues uncertain matches for manual review
@@ -109,8 +109,7 @@ Confidence interpretation:
 ## Privacy and security
 
 - Gmail scope: `https://www.googleapis.com/auth/gmail.readonly`
-- O365 scope: `offline_access Mail.Read User.Read`
-- IMAP: Direct credential authentication (passwords stored encrypted)
+- IMAP: Direct credential authentication (passwords stored encrypted with AES-256-GCM)
 - Minimal metadata sent for matching
 - Email data stays local in your instance
 
@@ -125,13 +124,10 @@ Confidence interpretation:
 | GET    | `/api/jobs/:id/emails?limit=100`          | List job-linked email metadata |
 | GET    | `/api/post-application/providers/gmail/oauth/start` | Start OAuth flow |
 | POST   | `/api/post-application/providers/gmail/oauth/exchange` | Exchange OAuth code |
-| GET    | `/api/post-application/providers/o365/oauth/start` | Start OAuth flow |
-| POST   | `/api/post-application/providers/o365/oauth/exchange` | Exchange OAuth code |
 
 ## Common issues
 
-- No refresh token: disconnect and reconnect Gmail/O365.
-- O365 token/tenant errors: confirm Entra app permissions and `O365_OAUTH_TENANT_ID`.
+- No refresh token: disconnect and reconnect Gmail.
 - IMAP authentication failed: verify credentials, enable app passwords if 2FA is enabled.
 - Emails not appearing: check runs, OAuth/IMAP config, and recruitment subjects.
 - Wrong matches: expected in lower-confidence buckets; use manual review.
