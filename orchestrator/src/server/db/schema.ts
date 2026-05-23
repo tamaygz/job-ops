@@ -879,6 +879,322 @@ export const tracerClickEvents = sqliteTable(
   }),
 );
 
+// ---------------------------------------------------------------------------
+// Investigator tables
+// ---------------------------------------------------------------------------
+
+export const investigatorDossiers = sqliteTable(
+  "investigator_dossiers",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    companyName: text("company_name").notNull(),
+    canonicalCompanyKey: text("canonical_company_key").notNull(),
+    companyUrl: text("company_url"),
+    normalizedDomain: text("normalized_domain"),
+    status: text("status", {
+      enum: ["active", "watchlist", "interviewing", "archived", "declined"],
+    })
+      .notNull()
+      .default("active"),
+    tags: text("tags", { mode: "json" }).$type<string[]>(),
+    lastResearchedAt: integer("last_researched_at", { mode: "number" }),
+    createdFromJobId: text("created_from_job_id"),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    tenantCanonicalKeyUnique: uniqueIndex(
+      "idx_investigator_dossiers_tenant_canonical_key_unique",
+    ).on(table.tenantId, table.canonicalCompanyKey),
+    tenantStatusIndex: index("idx_investigator_dossiers_tenant_status").on(
+      table.tenantId,
+      table.status,
+    ),
+  }),
+);
+
+export const investigatorDossierJobs = sqliteTable(
+  "investigator_dossier_jobs",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    dossierId: text("dossier_id").notNull(),
+    jobId: text("job_id").notNull(),
+    linkReason: text("link_reason", {
+      enum: ["seeded", "manual", "suggested"],
+    }).notNull(),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    tenantDossierJobUnique: uniqueIndex(
+      "idx_investigator_dossier_jobs_tenant_dossier_job_unique",
+    ).on(table.tenantId, table.dossierId, table.jobId),
+    dossierIndex: index("idx_investigator_dossier_jobs_dossier_id").on(
+      table.dossierId,
+    ),
+  }),
+);
+
+export const investigatorResearchRuns = sqliteTable(
+  "investigator_research_runs",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    dossierId: text("dossier_id").notNull(),
+    runKind: text("run_kind", {
+      enum: ["company_brief", "people_scan", "dossier_refresh"],
+    }).notNull(),
+    status: text("status", {
+      enum: [
+        "queued",
+        "running",
+        "completed",
+        "partial_failed",
+        "failed",
+        "cancelled",
+      ],
+    })
+      .notNull()
+      .default("queued"),
+    initiatedBy: text("initiated_by", { enum: ["user", "system"] })
+      .notNull()
+      .default("user"),
+    seedContext: text("seed_context", { mode: "json" }),
+    startedAt: integer("started_at", { mode: "number" }),
+    completedAt: integer("completed_at", { mode: "number" }),
+    errorCode: text("error_code"),
+    errorMessage: text("error_message"),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    dossierStatusIndex: index(
+      "idx_investigator_research_runs_dossier_status",
+    ).on(table.dossierId, table.status),
+    tenantStatusIndex: index(
+      "idx_investigator_research_runs_tenant_status",
+    ).on(table.tenantId, table.status),
+  }),
+);
+
+export const investigatorSources = sqliteTable(
+  "investigator_sources",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    dossierId: text("dossier_id").notNull(),
+    runId: text("run_id"),
+    sourceType: text("source_type", {
+      enum: [
+        "company_site",
+        "news_article",
+        "public_profile",
+        "github_profile",
+        "review_site",
+        "salary_site",
+        "job_metadata",
+        "manual_note",
+        "other_web_page",
+      ],
+    }).notNull(),
+    title: text("title").notNull(),
+    url: text("url"),
+    sourceHost: text("source_host"),
+    capturedExcerpt: text("captured_excerpt").notNull(),
+    retrievedAt: integer("retrieved_at", { mode: "number" }).notNull(),
+    reviewState: text("review_state", {
+      enum: [
+        "unreviewed",
+        "verified",
+        "low_confidence",
+        "outdated",
+        "rejected",
+      ],
+    })
+      .notNull()
+      .default("unreviewed"),
+    reviewerNote: text("reviewer_note"),
+    contentHash: text("content_hash"),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    dossierIndex: index("idx_investigator_sources_dossier_id").on(
+      table.dossierId,
+    ),
+    dossierReviewStateIndex: index(
+      "idx_investigator_sources_dossier_review_state",
+    ).on(table.dossierId, table.reviewState),
+  }),
+);
+
+export const investigatorPeople = sqliteTable(
+  "investigator_people",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    dossierId: text("dossier_id").notNull(),
+    runId: text("run_id"),
+    fullName: text("full_name").notNull(),
+    personType: text("person_type", {
+      enum: [
+        "recruiter",
+        "hiring_manager",
+        "interviewer",
+        "executive",
+        "founder",
+        "employee",
+      ],
+    }).notNull(),
+    title: text("title"),
+    profileUrl: text("profile_url"),
+    roleContext: text("role_context"),
+    notes: text("notes"),
+    confidenceLabel: text("confidence_label", {
+      enum: ["high", "medium", "low", "unknown"],
+    }).notNull(),
+    sourceIds: text("source_ids", { mode: "json" }).$type<string[]>(),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    dossierIndex: index("idx_investigator_people_dossier_id").on(
+      table.dossierId,
+    ),
+    dossierPersonTypeIndex: index(
+      "idx_investigator_people_dossier_person_type",
+    ).on(table.dossierId, table.personType),
+  }),
+);
+
+export const investigatorSalaryObservations = sqliteTable(
+  "investigator_salary_observations",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    dossierId: text("dossier_id").notNull(),
+    runId: text("run_id"),
+    roleScope: text("role_scope"),
+    geoScope: text("geo_scope"),
+    currency: text("currency"),
+    payInterval: text("pay_interval", {
+      enum: ["annual", "monthly", "hourly", "unknown"],
+    }),
+    minAmount: real("min_amount"),
+    maxAmount: real("max_amount"),
+    equityText: text("equity_text"),
+    bonusText: text("bonus_text"),
+    confidenceLabel: text("confidence_label", {
+      enum: ["high", "medium", "low", "unknown"],
+    }).notNull(),
+    sourceId: text("source_id"),
+    observedAt: integer("observed_at", { mode: "number" }),
+    notes: text("notes"),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    dossierIndex: index(
+      "idx_investigator_salary_observations_dossier_id",
+    ).on(table.dossierId),
+  }),
+);
+
+export const investigatorSummaries = sqliteTable(
+  "investigator_summaries",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    dossierId: text("dossier_id").notNull(),
+    runId: text("run_id"),
+    summaryType: text("summary_type", {
+      enum: ["company_brief", "people_brief", "interview_angles"],
+    }).notNull(),
+    title: text("title").notNull(),
+    bodyMarkdown: text("body_markdown").notNull(),
+    factsJson: text("facts_json", { mode: "json" }).notNull(),
+    hypothesesJson: text("hypotheses_json", { mode: "json" }).notNull(),
+    reviewState: text("review_state", {
+      enum: ["draft", "reviewed"],
+    })
+      .notNull()
+      .default("draft"),
+    version: integer("version").notNull().default(1),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    dossierSummaryTypeIndex: index(
+      "idx_investigator_summaries_dossier_summary_type",
+    ).on(table.dossierId, table.summaryType),
+  }),
+);
+
+export const investigatorTimelineEvents = sqliteTable(
+  "investigator_timeline_events",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    dossierId: text("dossier_id").notNull(),
+    runId: text("run_id"),
+    eventType: text("event_type", {
+      enum: [
+        "dossier_created",
+        "job_linked",
+        "run_started",
+        "run_completed",
+        "run_partial_failed",
+        "run_failed",
+        "source_saved",
+        "source_reviewed",
+        "person_saved",
+        "salary_saved",
+        "summary_saved",
+        "status_changed",
+        "dossier_merged",
+      ],
+    }).notNull(),
+    payload: text("payload", { mode: "json" }).notNull(),
+    occurredAt: integer("occurred_at", { mode: "number" }).notNull(),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    dossierOccurredAtIndex: index(
+      "idx_investigator_timeline_events_dossier_occurred_at",
+    ).on(table.dossierId, table.occurredAt),
+    dossierEventTypeIndex: index(
+      "idx_investigator_timeline_events_dossier_event_type",
+    ).on(table.dossierId, table.eventType),
+  }),
+);
+
 export type UserRow = typeof users.$inferSelect;
 export type NewUserRow = typeof users.$inferInsert;
 export type TenantRow = typeof tenants.$inferSelect;
@@ -938,3 +1254,29 @@ export type TracerLinkRow = typeof tracerLinks.$inferSelect;
 export type NewTracerLinkRow = typeof tracerLinks.$inferInsert;
 export type TracerClickEventRow = typeof tracerClickEvents.$inferSelect;
 export type NewTracerClickEventRow = typeof tracerClickEvents.$inferInsert;
+export type InvestigatorDossierRow = typeof investigatorDossiers.$inferSelect;
+export type NewInvestigatorDossierRow =
+  typeof investigatorDossiers.$inferInsert;
+export type InvestigatorDossierJobRow =
+  typeof investigatorDossierJobs.$inferSelect;
+export type NewInvestigatorDossierJobRow =
+  typeof investigatorDossierJobs.$inferInsert;
+export type InvestigatorResearchRunRow =
+  typeof investigatorResearchRuns.$inferSelect;
+export type NewInvestigatorResearchRunRow =
+  typeof investigatorResearchRuns.$inferInsert;
+export type InvestigatorSourceRow = typeof investigatorSources.$inferSelect;
+export type NewInvestigatorSourceRow = typeof investigatorSources.$inferInsert;
+export type InvestigatorPersonRow = typeof investigatorPeople.$inferSelect;
+export type NewInvestigatorPersonRow = typeof investigatorPeople.$inferInsert;
+export type InvestigatorSalaryObservationRow =
+  typeof investigatorSalaryObservations.$inferSelect;
+export type NewInvestigatorSalaryObservationRow =
+  typeof investigatorSalaryObservations.$inferInsert;
+export type InvestigatorSummaryRow = typeof investigatorSummaries.$inferSelect;
+export type NewInvestigatorSummaryRow =
+  typeof investigatorSummaries.$inferInsert;
+export type InvestigatorTimelineEventRow =
+  typeof investigatorTimelineEvents.$inferSelect;
+export type NewInvestigatorTimelineEventRow =
+  typeof investigatorTimelineEvents.$inferInsert;
