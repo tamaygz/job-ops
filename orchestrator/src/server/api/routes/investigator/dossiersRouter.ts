@@ -12,6 +12,7 @@ import {
 import { type Request, type Response, Router } from "express";
 import { z } from "zod";
 import { runsRouter } from "./runsRouter";
+import { sourcesRouter } from "./sourcesRouter";
 
 export const dossiersRouter = Router();
 
@@ -275,3 +276,9 @@ dossiersRouter.delete(
 // ---------------------------------------------------------------------------
 
 dossiersRouter.use("/:dossierId/runs", runsRouter);
+
+// ---------------------------------------------------------------------------
+// Sub-router: /api/investigator/dossiers/:dossierId/sources
+// ---------------------------------------------------------------------------
+
+dossiersRouter.use("/:dossierId/sources", sourcesRouter);

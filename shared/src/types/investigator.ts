@@ -365,7 +365,9 @@ export const CreateInvestigatorDossierInputSchema = z
     companyName: z.string().min(1),
     companyUrl: z.string().url().nullish(),
     sourceJobId: z.string().nullish(),
-    status: z.enum(dossierStatusValues as [DossierStatus, ...DossierStatus[]]).optional(),
+    status: z
+      .enum(dossierStatusValues as [DossierStatus, ...DossierStatus[]])
+      .optional(),
     tags: z.array(z.string()).optional(),
   })
   .strict();
@@ -374,7 +376,9 @@ export const UpdateInvestigatorDossierInputSchema = z
   .object({
     companyName: z.string().min(1).optional(),
     companyUrl: z.string().url().nullish(),
-    status: z.enum(dossierStatusValues as [DossierStatus, ...DossierStatus[]]).optional(),
+    status: z
+      .enum(dossierStatusValues as [DossierStatus, ...DossierStatus[]])
+      .optional(),
     tags: z.array(z.string()).optional(),
   })
   .strict();
@@ -443,5 +447,31 @@ export const RegenerateInvestigatorSummaryInputSchema = z
   .object({
     summaryType: z.enum(summaryTypeValues as [SummaryType, ...SummaryType[]]),
     runId: z.string().nullish(),
+  })
+  .strict();
+
+export interface UpdateInvestigatorSourceInput {
+  sourceType?: SourceType;
+  title?: string;
+  url?: string | null;
+  capturedExcerpt?: string;
+  retrievedAt?: number;
+  reviewState?: ReviewState;
+  reviewerNote?: string | null;
+}
+
+export const UpdateInvestigatorSourceInputSchema = z
+  .object({
+    sourceType: z
+      .enum(sourceTypeValues as [SourceType, ...SourceType[]])
+      .optional(),
+    title: z.string().min(1).optional(),
+    url: z.string().url().nullish(),
+    capturedExcerpt: z.string().min(1).optional(),
+    retrievedAt: z.number().int().optional(),
+    reviewState: z
+      .enum(reviewStateValues as [ReviewState, ...ReviewState[]])
+      .optional(),
+    reviewerNote: z.string().nullish(),
   })
   .strict();
