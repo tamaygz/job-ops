@@ -1,4 +1,4 @@
-You are implementing issue {ISSUE_NUMBER} for the JobOps Investigator feature.
+IMPLEMENT issue {ISSUE_NUMBER} for the JobOps Investigator feature.
 
 ## Required Reading (in order)
 
