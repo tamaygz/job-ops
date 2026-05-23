@@ -1,5 +1,8 @@
+import { PeoplePanel } from "@client/components/investigator/PeoplePanel";
 import { RunProgressPanel } from "@client/components/investigator/RunProgressPanel";
+import { SalaryPanel } from "@client/components/investigator/SalaryPanel";
 import { SourceReviewPanel } from "@client/components/investigator/SourceReviewPanel";
+import { SummaryPanel } from "@client/components/investigator/SummaryPanel";
 import { PageHeader, PageMain } from "@client/components/layout";
 import {
   useCancelRun,
@@ -9,9 +12,6 @@ import {
 import {
   useDossier,
   useRuns,
-  useSources,
-  useSummaries,
-  useTimeline,
 } from "@client/hooks/queries/useInvestigatorQueries";
 import { showErrorToast } from "@client/lib/error-toast";
 import type {
@@ -366,14 +366,7 @@ export const InvestigatorDetailPage: React.FC = () => {
 
   const { data: dossier, isLoading, error } = useDossier(dossierId);
 
-  // Lazy-load sources and timeline only when their tab is first activated
-  const sourcesEnabled = activeTab === "sources";
-  const timelineEnabled = activeTab === "timeline";
-
   const { data: runs, isLoading: runsLoading } = useRuns(dossierId);
-  useSources(dossierId, { enabled: sourcesEnabled });
-  useSummaries(dossierId, undefined, { enabled: activeTab === "summary" });
-  useTimeline(dossierId, undefined, { enabled: timelineEnabled });
 
   // 404 / error state
   if (error) {
@@ -523,7 +516,7 @@ export const InvestigatorDetailPage: React.FC = () => {
           </TabsList>
 
           <TabsContent value="summary" className="space-y-4">
-            <TabStub message="Summaries will appear here once a research run completes." />
+            <SummaryPanel dossierId={dossierId} />
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-4">
@@ -531,11 +524,11 @@ export const InvestigatorDetailPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="people" className="space-y-4">
-            <TabStub message="People discovered during research will appear here." />
+            <PeoplePanel dossierId={dossierId} />
           </TabsContent>
 
           <TabsContent value="salary" className="space-y-4">
-            <TabStub message="Salary observations will appear here." />
+            <SalaryPanel dossierId={dossierId} />
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
