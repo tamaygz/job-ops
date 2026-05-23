@@ -135,7 +135,7 @@ function getOtherSectionContent(
   const items = profile.sections[section as keyof typeof profile.sections];
   if (!items || (Array.isArray(items) && items.length === 0)) return "(empty)";
 
-  return (items as Record<string, unknown>[])
+  return (items as unknown as Record<string, unknown>[])
     .map((item) =>
       Object.values(item)
         .filter((v) => typeof v === "string" || Array.isArray(v))
@@ -232,7 +232,7 @@ export async function* evaluateSections(
       } else {
         logger.warn("LLM evaluation failed for section", {
           section,
-          error: result.error,
+          error: !result.success ? result.error : "No data in response",
         });
         yield {
           section,

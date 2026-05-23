@@ -435,15 +435,17 @@ function renderOtherSectionContent(
 
   return (
     <div className="flex flex-wrap gap-1">
-      {items.slice(0, 6).map((item: Record<string, unknown>) => (
-        <Badge
-          key={String(item.name ?? item.title ?? item.language ?? "")}
-          variant="secondary"
-          className="text-xs"
-        >
-          {String(item.name ?? item.title ?? item.language ?? "")}
-        </Badge>
-      ))}
+      {(items as unknown as Record<string, unknown>[])
+        .slice(0, 6)
+        .map((item) => (
+          <Badge
+            key={String(item.name ?? item.title ?? item.language ?? "")}
+            variant="secondary"
+            className="text-xs"
+          >
+            {String(item.name ?? item.title ?? item.language ?? "")}
+          </Badge>
+        ))}
       {items.length > 6 && (
         <Badge variant="outline" className="text-xs">
           +{items.length - 6}

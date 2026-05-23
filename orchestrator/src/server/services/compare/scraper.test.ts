@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@infra/errors";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Scraper tests mock the scraper's internal strategies.
@@ -8,10 +8,6 @@ import { AppError } from "@infra/errors";
  * and testing the exported function's error handling contract.
  */
 describe("compare/scraper", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -51,9 +47,7 @@ describe("compare/scraper", () => {
     // This test verifies the fetch error handling path.
     // We test it by checking the error contract if fetch is the only path.
     try {
-      await scrapeLinkedInProfile(
-        "https://www.linkedin.com/in/blocked-user",
-      );
+      await scrapeLinkedInProfile("https://www.linkedin.com/in/blocked-user");
       // If Camoufox succeeds, the test passes (valid result)
     } catch (error) {
       // If it falls through to fetch, it should throw with UPSTREAM_ERROR
@@ -65,14 +59,10 @@ describe("compare/scraper", () => {
   it("surfaces AppError when fetch rejects with a network error", async () => {
     const { scrapeLinkedInProfile } = await import("./scraper");
 
-    vi.spyOn(global, "fetch").mockRejectedValue(
-      new Error("Network failure"),
-    );
+    vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network failure"));
 
     try {
-      await scrapeLinkedInProfile(
-        "https://www.linkedin.com/in/network-error",
-      );
+      await scrapeLinkedInProfile("https://www.linkedin.com/in/network-error");
       // If Camoufox succeeds first, the test passes
     } catch (error) {
       expect(error).toBeInstanceOf(AppError);

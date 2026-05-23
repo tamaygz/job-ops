@@ -42,11 +42,15 @@ describe("compare/normaliser", () => {
   });
 
   it("drops email, phone, and connections fields from output", () => {
+    // Verify the fixture actually contains these PII fields before testing removal
+    expect(fixtureHtml).toContain("jane.doe@example.com");
+    expect(fixtureHtml).toContain("+1-555-123-4567");
+    expect(fixtureHtml).toContain("500+ connections");
+
     const result = normaliseLinkedInHtml(fixtureHtml, URL);
     const serialized = JSON.stringify(result);
 
-    // The fixture contains email, phone, and connections in the JSON-LD
-    // but the normaliser must strip them
+    // The normaliser must strip email, phone, and connections from the output
     expect(serialized).not.toContain("jane.doe@example.com");
     expect(serialized).not.toContain("+1-555-123-4567");
     expect(serialized).not.toContain("500+ connections");
