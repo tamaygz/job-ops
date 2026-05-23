@@ -11,6 +11,7 @@ import {
 } from "@shared/types";
 import { type Request, type Response, Router } from "express";
 import { z } from "zod";
+import { runsRouter } from "./runsRouter";
 
 export const dossiersRouter = Router();
 
@@ -268,3 +269,9 @@ dossiersRouter.delete(
     }
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Sub-router: /api/investigator/dossiers/:dossierId/runs
+// ---------------------------------------------------------------------------
+
+dossiersRouter.use("/:dossierId/runs", runsRouter);

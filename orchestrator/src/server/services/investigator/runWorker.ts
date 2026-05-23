@@ -6,6 +6,7 @@ import { getJobQueue } from "@server/infra/job-queue-registry";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as runRepo from "@server/repositories/investigatorRunRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
+import { notifyRunProgress } from "./runProgress";
 
 const log = logger.child({ service: "runWorker" });
 
@@ -82,6 +83,11 @@ async function processQueuedRun(
 
       const startedAt = Math.floor(Date.now() / 1000);
       await runRepo.updateStatus(payload.runId, "running", { startedAt });
+      notifyRunProgress({
+        runId: payload.runId,
+        dossierId: payload.dossierId,
+        status: "running",
+      });
 
       log.info("Research run processing started", {
         runId: payload.runId,
@@ -95,6 +101,11 @@ async function processQueuedRun(
 
         const completedAt = Math.floor(Date.now() / 1000);
         await runRepo.updateStatus(payload.runId, "completed", { completedAt });
+        notifyRunProgress({
+          runId: payload.runId,
+          dossierId: payload.dossierId,
+          status: "completed",
+        });
         await dossierRepo.update(payload.dossierId, {
           lastResearchedAt: completedAt,
         });
@@ -131,6 +142,12 @@ async function processQueuedRun(
           completedAt: failedAt,
           errorCode,
           errorMessage,
+        });
+        notifyRunProgress({
+          runId: payload.runId,
+          dossierId: payload.dossierId,
+          status: "failed",
+          message: errorMessage,
         });
 
         await timelineRepo.insertEvent({
