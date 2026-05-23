@@ -41,8 +41,10 @@ Intended audience:
 Assumptions:
 
 - JobOps continues to use the existing orchestrator stack based on Express, React, TypeScript, Drizzle ORM, SQLite, and tenant-scoped server entities.
+- JobOps continues to follow the current monorepo split: `orchestrator` for server and client implementation, `shared` for public domain types, schemas, and utilities, and `docs-site` for user-facing documentation.
 - Existing job records, job notes, and ready-panel search links remain authoritative adjacent systems.
 - The existing API response contract and request ID behavior from [AGENTS.md](../AGENTS.md) remain mandatory.
+- New investigator implementation should use existing path aliases and architectural boundaries rather than introducing a feature-local framework or persistence pattern.
 
 ## 2. Definitions
 
@@ -111,6 +113,8 @@ Assumptions:
 | NFR-003 | Source capture and summarization shall be rate-limit aware and resilient to partial failure. |
 | NFR-004 | New schema and repository code shall follow existing JobOps TypeScript, Drizzle, and Express patterns without introducing a parallel persistence stack. |
 | NFR-005 | The implementation shall preserve the user's ability to manually edit all persisted dossier artifacts after AI generation. |
+| NFR-006 | Public investigator data contracts shall be defined in `shared` so server and client code consume the same domain types. |
+| NFR-007 | Long-running run orchestration shall use the existing queue, service, or SSE abstractions already established in `orchestrator/src/server/infra` rather than ad hoc background state. |
 
 ### 3.4 Constraints
 
@@ -132,8 +136,48 @@ Assumptions:
 | PAT-001 | New investigator tables should follow the existing Drizzle table pattern with `id`, `tenantId`, `createdAt`, and `updatedAt` fields. |
 | PAT-002 | Investigator routes should mirror existing Express route organization under `/api/*` with zod-validated inputs and structured error translation. |
 | PAT-003 | Summary generation should persist fact and hypothesis sections separately so downstream consumers can apply different trust and display rules. |
+| PAT-004 | Investigator routes shall use `asyncRoute()` plus `ok()` and `fail()` from `@infra/http`; route handlers shall never call `res.json()` directly. |
+| PAT-005 | Repositories shall remain thin Drizzle data-access layers, while normalization, merge logic, AI summarization, and run orchestration shall live in services. |
+| PAT-006 | Client fetch functions shall live in `orchestrator/src/client/api/` with one exported function per operation, while cache keys shall be centralized in `orchestrator/src/client/lib/queryKeys.ts`. |
+| PAT-007 | If live progress streaming is introduced, it shall use centralized helpers from `orchestrator/src/server/infra/sse.ts` and `orchestrator/src/client/lib/sse.ts`. |
+| PAT-008 | Investigator summarization shall use the existing LLM service and provider strategy stack under `orchestrator/src/server/services/llm/` instead of a custom AI transport. |
+
+### 3.6 Repo Architecture Alignment
+
+The Investigator feature shall fit the repository using the same ownership model already used by JobOps.
+
+Recommended implementation topology:
+
+| Layer | Expected location | Responsibility |
+|---|---|---|
+| Shared domain types | `shared/src/types/investigator.ts` | Public entities, enums, DTOs, and response payload types shared by client and server |
+| Shared API response usage | `shared/src/types/api.ts` | Reuse existing `ApiResponse<T>` discriminated union |
+| Server routes | `orchestrator/src/server/api/routes/investigator/*.ts` | One router file per investigator domain such as dossiers, runs, sources, people, summaries |
+| Server repositories | `orchestrator/src/server/repositories/investigator*.ts` | Thin Drizzle queries only |
+| Server services | `orchestrator/src/server/services/investigator/*.ts` | Canonical company normalization, merge behavior, run orchestration, summarization, source capture, timeline writing |
+| Server infra reuse | `orchestrator/src/server/infra/*` | Queue, SSE, logger, sanitize, errors, request context, HTTP helpers |
+| Client API | `orchestrator/src/client/api/investigator*.ts` | Typed API functions with auth-aware `core.ts` plumbing |
+| Client hooks | `orchestrator/src/client/hooks/queries/*` | TanStack Query hooks, mutations, and invalidation |
+| Client query keys | `orchestrator/src/client/lib/queryKeys.ts` | Centralized `queryKeys.investigator.*` entries |
+| Client pages/components | `orchestrator/src/client/pages/` and `orchestrator/src/client/components/` | Dossier list, dossier detail, run progress, source review, people cards |
+
+Implementation consequences:
+
+- Investigator request validation schemas may live close to route handlers when route-local, but public payload types and shared enums should live in `shared`.
+- Thin repositories should not embed LLM calls, merge heuristics, or source-fetch logic.
+- Services should own unit-of-work orchestration such as seeding from jobs, writing timeline events, and kicking off queued runs.
+- Any new in-memory state or dedupe maps must be keyed by tenant, following the existing multi-tenant rule.
 
 ## 4. Interfaces & Data Contracts
+
+### 4.0 Implementation Contracts
+
+Before defining entities and endpoints, the feature shall adopt the following repo-native contracts:
+
+- All investigator endpoint payloads shall be typed as `ApiResponse<T>` from [shared/src/types/api.ts](../shared/src/types/api.ts).
+- Public investigator DTOs should be exported from a new shared domain module instead of being duplicated in client and server code.
+- Route handlers shall be wrapped with `asyncRoute()` and shall use `ok()` and `fail()` helpers from `@infra/http`.
+- Repository methods should expose domain-level CRUD primitives, while service methods should expose workflow-level operations such as `createDossierFromJob`, `startResearchRun`, `mergeDossiers`, or `regenerateSummary`.
 
 ### 4.1 Domain Entities
 
@@ -157,6 +201,7 @@ Assumptions:
 Invariant:
 
 - `tenantId + canonicalCompanyKey` must be unique.
+- `companyName` and `canonicalCompanyKey` normalization logic should be implemented in a shared investigator normalization utility owned by a service, not inline in routes.
 
 #### 4.1.2 `investigator_dossier_jobs`
 
@@ -286,6 +331,32 @@ Invariant:
 | createdAt | text datetime | Yes | Audit field |
 | updatedAt | text datetime | Yes | Audit field |
 
+### 4.1.9 Shared DTO and schema guidance
+
+The following public DTO families should be defined in `shared` and consumed by both server and client:
+
+- `InvestigatorDossier`
+- `InvestigatorDossierListItem`
+- `InvestigatorResearchRun`
+- `InvestigatorSource`
+- `InvestigatorPerson`
+- `InvestigatorSalaryObservation`
+- `InvestigatorSummary`
+- `InvestigatorTimelineEvent`
+
+Recommended shared request or filter types:
+
+- `InvestigatorDossierListFilters`
+- `CreateInvestigatorDossierInput`
+- `UpdateInvestigatorDossierInput`
+- `StartInvestigatorRunInput`
+- `CreateInvestigatorSourceInput`
+- `CreateInvestigatorPersonInput`
+- `CreateInvestigatorSalaryObservationInput`
+- `RegenerateInvestigatorSummaryInput`
+
+When zod schemas are shared across client and server, prefer placing them beside the shared DTOs. When schemas are route-local only, keep them in the route module or a route-local `shared.ts` helper following the existing jobs route pattern.
+
 ### 4.2 Enumerations
 
 ```json
@@ -303,6 +374,13 @@ Invariant:
 ### 4.3 API Contracts
 
 All new routes shall live under `/api/investigator/*` and follow the standard JobOps response contract.
+
+Route implementation rules:
+
+- One router file per investigator domain.
+- Use `asyncRoute()` so thrown errors reach the centralized error handler.
+- Translate domain failures through `@infra/errors` helpers such as `badRequest`, `notFound`, `conflict`, `upstreamError`, and `serviceUnavailable`.
+- Use the shared logger and sanitize helper for route failures and upstream research failures.
 
 #### 4.3.1 Dossier routes
 
@@ -411,6 +489,18 @@ Example start-run request:
 |---|---|---|
 | GET | `/api/investigator/dossiers/:dossierId/timeline` | Retrieve ordered history feed |
 
+### 4.3.8 Optional progress transport
+
+Baseline v1 behavior should work through durable run status plus client-side polling via TanStack Query.
+
+If live progress is added during implementation, the preferred contract is:
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/api/investigator/dossiers/:dossierId/runs/:runId/events` | SSE progress stream for run lifecycle and artifact updates |
+
+SSE implementation must reuse [orchestrator/src/server/infra/sse.ts](../orchestrator/src/server/infra/sse.ts) and [orchestrator/src/client/lib/sse.ts](../orchestrator/src/client/lib/sse.ts), not a bespoke stream format.
+
 ### 4.4 Reuse of Existing Job Notes Contract
 
 Promotion of investigator insights into job notes shall reuse the existing jobs note route instead of introducing a new duplicate notes subsystem.
@@ -424,6 +514,50 @@ Reused route:
 Constraint:
 
 - The investigator feature may prefill the note title and content, but the user must confirm before save.
+
+### 4.4.1 Client query contracts
+
+Client state should follow existing query-key centralization. Add a new top-level `queryKeys.investigator` family with keys similar to:
+
+```ts
+investigator: {
+  all: ["investigator"],
+  dossiers: (filters) => [...queryKeys.investigator.all, "dossiers", filters],
+  detail: (dossierId) => [...queryKeys.investigator.all, "detail", dossierId],
+  runs: (dossierId) => [...queryKeys.investigator.all, "runs", dossierId],
+  sources: (dossierId) => [...queryKeys.investigator.all, "sources", dossierId],
+  people: (dossierId) => [...queryKeys.investigator.all, "people", dossierId],
+  salaryObservations: (dossierId) => [...queryKeys.investigator.all, "salary-observations", dossierId],
+  summaries: (dossierId) => [...queryKeys.investigator.all, "summaries", dossierId],
+  timeline: (dossierId) => [...queryKeys.investigator.all, "timeline", dossierId],
+}
+```
+
+Mutation hooks should invalidate only the investigator slices they affect plus job detail or notes slices when investigator actions write back into job-level features.
+
+### 4.4.2 Queue integration contract
+
+Because research runs are asynchronous, implementation should extend the centralized queue abstraction rather than creating feature-local background execution interfaces.
+
+Recommended queue addition:
+
+```ts
+JOB_QUEUE_NAMES += ["investigator_research_run"]
+
+interface InvestigatorResearchRunJobPayload {
+  tenantId: string;
+  dossierId: string;
+  runId: string;
+  runKind: "company_brief" | "people_scan" | "dossier_refresh";
+  requestedAt: string;
+  requestedBy: "system" | "user";
+}
+```
+
+Queue dedupe guidance:
+
+- Dedupe keys should include tenant and dossier identity, such as `tenantId:dossierId:runKind`.
+- Queue payloads must never omit `tenantId`.
 
 ### 4.5 UI State Model
 
@@ -534,6 +668,7 @@ stateDiagram-v2
   - Cascading behavior for dossier deletion and job linking.
   - Sanitized route error behavior and request ID propagation.
   - Promotion of investigator insight into existing job notes.
+  - Route behavior through the real Express server using the same `startServer()` and `stopServer()` test utilities used by the repo's route integration tests.
 - **UI Integration Scope**:
   - Create dossier from job context.
   - Run creation, status refresh, and partial-failure handling.
@@ -551,6 +686,7 @@ stateDiagram-v2
   - Every new public investigator route must have direct integration coverage.
   - Every new repository must have CRUD and tenant-isolation coverage.
   - Every state transition in the research run lifecycle must have direct automated test coverage.
+  - New route files must continue to satisfy the existing API contract safeguards that prohibit direct `res.json()` use on `/api/*` endpoints.
   - Numeric coverage thresholds are optional; risk-based route and state coverage is mandatory.
 - **CI/CD Integration**:
   - Targeted tests for the touched investigator slice should run first.
@@ -570,8 +706,12 @@ The design intentionally extends existing systems instead of replacing them:
 - Existing job notes remain the destination for promoted insights.
 - Existing ready-panel search link behavior informs guided people and company discovery.
 - Existing tenant and API standards constrain how new investigator routes behave.
+- Existing repository and service layering constrain where logic should live.
+- Existing queue, SSE, and query-key abstractions constrain how async runs and UI refresh behavior should be implemented.
 
 The semi-automated approach is deliberate. It balances usefulness with legal, privacy, and trust concerns. The feature should help the user search, collect, summarize, and organize, but not silently scrape or autonomously accumulate sensitive data. Review states, explicit source attribution, and clear separation of facts from hypotheses are required because opaque AI summaries would reduce trust and make the feature hard to use for interview preparation.
+
+The architectural fit matters as much as the feature design. In JobOps, routes are intentionally thin, repositories stay close to Drizzle, client caching is centralized, and provider logic is shared. Keeping Investigator inside those constraints reduces maintenance cost and ensures the feature composes with existing request context, logging, retries, and tenant isolation.
 
 The immutable timeline is included because the product goal is not just storage. The feature must preserve what changed, when it changed, and which evidence supported a conclusion at the time. This gives users a practical long-lived dossier rather than another transient AI chat output.
 
@@ -585,15 +725,16 @@ The immutable timeline is included because the product goal is not just storage.
 
 ### Third-Party Services
 
-- **SVC-001**: Configured LLM provider - Generates summaries and structured synthesis using existing JobOps AI provider infrastructure.
+- **SVC-001**: Configured LLM provider - Generates summaries and structured synthesis through the existing `services/llm/service.ts` orchestration and provider strategy stack.
 - **SVC-002**: Public web search and fetch tools - Support guided research and evidence capture in user-initiated flows.
 - **SVC-003**: Public professional web sources - Company sites, public profiles, and public compensation or review pages subject to source terms.
 
 ### Infrastructure Dependencies
 
 - **INF-001**: SQLite plus Drizzle ORM persistence in orchestrator.
-- **INF-002**: Existing asynchronous server execution pattern for background or queued work.
-- **INF-003**: Existing logging, request ID propagation, and error translation infrastructure.
+- **INF-002**: Existing `JobQueue` abstraction for background orchestration.
+- **INF-003**: Existing logging, request ID propagation, sanitize, and error translation infrastructure.
+- **INF-004**: Existing SSE helpers if live run progress is exposed.
 
 ### Data Dependencies
 
@@ -606,6 +747,7 @@ The immutable timeline is included because the product goal is not just storage.
 - **PLT-001**: Node 22 runtime and TypeScript across workspace packages.
 - **PLT-002**: Express route structure and zod request validation in orchestrator.
 - **PLT-003**: React plus TanStack Query client patterns for dossier screens and polling.
+- **PLT-004**: Shared domain type publishing from `shared/src` and path-alias based imports.
 
 ### Compliance Dependencies
 
@@ -695,12 +837,16 @@ The immutable timeline is included because the product goal is not just storage.
 
 - Investigator schema includes tenant-scoped entities for dossiers, job links, runs, sources, people, salary observations, summaries, and timeline events.
 - Every new investigator route returns the standard JobOps API response contract and `x-request-id` header.
+- Every new investigator route uses `asyncRoute()` and `ok()` or `fail()` helpers instead of direct JSON responses.
 - Dossier creation from a job uses existing company metadata as seed context when available.
 - Source artifacts and summaries demonstrate traceability between displayed conclusions and saved evidence.
 - Generated summaries preserve explicit fact and hypothesis sections.
 - Partial run handling allows useful draft persistence rather than forcing all-or-nothing outcomes.
 - Promotion to job notes reuses the existing job notes API and preserves prior notes unless the user chooses to edit them.
 - Tenant isolation is covered across repositories, routes, background work, caches, and storage paths.
+- New investigator background execution extends the shared job queue contract and includes tenant-aware dedupe behavior.
+- New client-side state uses centralized investigator query keys and typed API client functions.
+- LLM-powered summarization is routed through the existing LLM service layer and provider strategy stack.
 - Logs and route errors are structured and sanitized according to repository rules.
 - UI states cover empty, seeded, running, completed, partial-failed, archived, and stale dossier scenarios.
 - All required CI-parity checks and investigator-specific tests pass.
