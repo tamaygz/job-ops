@@ -1,5 +1,6 @@
 export * from "./api";
 export * from "./chat";
+export * from "./compare";
 export * from "./design-resume";
 export * from "./design-resume-jake";
 export * from "./extractors";

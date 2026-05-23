@@ -19,6 +19,7 @@ import { OnboardingGate } from "./components/OnboardingGate";
 import { useAnalyticsIdentity } from "./hooks/useAnalyticsIdentity";
 import { useDemoInfo } from "./hooks/useDemoInfo";
 import { setAuthNavigator } from "./lib/auth-navigation";
+import { ComparePage } from "./pages/ComparePage";
 import { DesignResumePage } from "./pages/DesignResumePage";
 import { GmailOauthCallbackPage } from "./pages/GmailOauthCallbackPage";
 import { HomePage } from "./pages/HomePage";
@@ -194,6 +195,7 @@ export const App: React.FC = () => {
                   path="/design-resume/:section"
                   element={<DesignResumePage />}
                 />
+                <Route path="/compare" element={<ComparePage />} />
                 <Route path="/onboarding" element={<OnboardingPage />} />
                 <Route path="/offline" element={<OfflinePage />} />
                 <Route path="/sign-in" element={<SignInPage />} />
