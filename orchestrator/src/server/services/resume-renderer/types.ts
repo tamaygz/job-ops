@@ -82,12 +82,18 @@ export interface LatexResumeStyle {
     primaryHex: string;
     textHex: string;
     backgroundHex: string;
+    secondaryBackgroundHex?: string;
   };
   typography: {
     bodyFontFamily: string;
     headingFontFamily: string;
   };
 }
+
+export type LatexResumeStyleOverrides = {
+  colors?: Partial<LatexResumeStyle["colors"]>;
+  typography?: Partial<LatexResumeStyle["typography"]>;
+};
 
 export interface LatexResumeDocument {
   name: string;
@@ -118,6 +124,7 @@ export interface RenderResumePdfArgs {
   outputPath: string;
   jobId: string;
   typstTheme?: TypstTheme;
+  typstStyleOverrides?: LatexResumeStyleOverrides;
 }
 
 export interface ResumeRenderer {
