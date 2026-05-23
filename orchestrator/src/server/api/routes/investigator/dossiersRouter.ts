@@ -13,6 +13,7 @@ import { type Request, type Response, Router } from "express";
 import { z } from "zod";
 import { peopleRouter } from "./peopleRouter";
 import { runsRouter } from "./runsRouter";
+import { salaryRouter } from "./salaryRouter";
 import { sourcesRouter } from "./sourcesRouter";
 
 export const dossiersRouter = Router();
@@ -289,3 +290,9 @@ dossiersRouter.use("/:dossierId/sources", sourcesRouter);
 // ---------------------------------------------------------------------------
 
 dossiersRouter.use("/:dossierId/people", peopleRouter);
+
+// ---------------------------------------------------------------------------
+// Sub-router: /api/investigator/dossiers/:dossierId/salary-observations
+// ---------------------------------------------------------------------------
+
+dossiersRouter.use("/:dossierId/salary-observations", salaryRouter);

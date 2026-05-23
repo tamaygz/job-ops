@@ -507,3 +507,39 @@ export const UpdateInvestigatorPersonInputSchema = z
     sourceIds: z.array(z.string()).optional(),
   })
   .strict();
+
+export interface UpdateInvestigatorSalaryObservationInput {
+  roleScope?: string | null;
+  geoScope?: string | null;
+  currency?: string | null;
+  payInterval?: PayInterval | null;
+  minAmount?: number | null;
+  maxAmount?: number | null;
+  equityText?: string | null;
+  bonusText?: string | null;
+  confidenceLabel?: ConfidenceLabel;
+  sourceId?: string | null;
+  observedAt?: number | null;
+  notes?: string | null;
+}
+
+export const UpdateInvestigatorSalaryObservationInputSchema = z
+  .object({
+    roleScope: z.string().nullish(),
+    geoScope: z.string().nullish(),
+    currency: z.string().nullish(),
+    payInterval: z
+      .enum(payIntervalValues as [PayInterval, ...PayInterval[]])
+      .nullish(),
+    minAmount: z.number().nullish(),
+    maxAmount: z.number().nullish(),
+    equityText: z.string().nullish(),
+    bonusText: z.string().nullish(),
+    confidenceLabel: z
+      .enum(confidenceLabelValues as [ConfidenceLabel, ...ConfidenceLabel[]])
+      .optional(),
+    sourceId: z.string().nullish(),
+    observedAt: z.number().int().nullish(),
+    notes: z.string().nullish(),
+  })
+  .strict();
