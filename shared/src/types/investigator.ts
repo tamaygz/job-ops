@@ -475,3 +475,35 @@ export const UpdateInvestigatorSourceInputSchema = z
     reviewerNote: z.string().nullish(),
   })
   .strict();
+
+export interface UpdateInvestigatorPersonInput {
+  fullName?: string;
+  personType?: PersonType;
+  title?: string | null;
+  profileUrl?: string | null;
+  roleContext?: string | null;
+  notes?: string | null;
+  confidenceLabel?: ConfidenceLabel;
+  sourceIds?: string[];
+}
+
+export const UpdateInvestigatorPersonInputSchema = z
+  .object({
+    fullName: z.string().min(1).optional(),
+    personType: z
+      .enum(personTypeValues as [PersonType, ...PersonType[]])
+      .optional(),
+    title: z.string().nullish(),
+    profileUrl: z
+      .string()
+      .url()
+      .describe("public professional profile only")
+      .nullish(),
+    roleContext: z.string().nullish(),
+    notes: z.string().nullish(),
+    confidenceLabel: z
+      .enum(confidenceLabelValues as [ConfidenceLabel, ...ConfidenceLabel[]])
+      .optional(),
+    sourceIds: z.array(z.string()).optional(),
+  })
+  .strict();

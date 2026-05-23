@@ -11,6 +11,7 @@ import {
 } from "@shared/types";
 import { type Request, type Response, Router } from "express";
 import { z } from "zod";
+import { peopleRouter } from "./peopleRouter";
 import { runsRouter } from "./runsRouter";
 import { sourcesRouter } from "./sourcesRouter";
 
@@ -282,3 +283,9 @@ dossiersRouter.use("/:dossierId/runs", runsRouter);
 // ---------------------------------------------------------------------------
 
 dossiersRouter.use("/:dossierId/sources", sourcesRouter);
+
+// ---------------------------------------------------------------------------
+// Sub-router: /api/investigator/dossiers/:dossierId/people
+// ---------------------------------------------------------------------------
+
+dossiersRouter.use("/:dossierId/people", peopleRouter);
