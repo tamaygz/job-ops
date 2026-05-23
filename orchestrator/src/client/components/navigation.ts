@@ -7,6 +7,7 @@ import {
   Inbox,
   LayoutDashboard,
   Link2,
+  Search,
   Settings,
   Shield,
 } from "lucide-react";
@@ -58,6 +59,7 @@ export const NAV_LINKS: NavLink[] = [
   },
   { to: "/visa-sponsors", label: "Visa Sponsors", icon: Shield },
   { to: "/watchlist", label: "Watchlist", icon: Eye },
+  { to: "/investigator", label: "Investigator", icon: Search },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

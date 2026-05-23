@@ -1,4 +1,9 @@
-export const JOB_QUEUE_NAMES = ["auto_pdf_regeneration"] as const;
+import type { RunKind } from "@shared/types/investigator";
+
+export const JOB_QUEUE_NAMES = [
+  "auto_pdf_regeneration",
+  "investigator_research_run",
+] as const;
 
 export type JobQueueName = (typeof JOB_QUEUE_NAMES)[number];
 
@@ -16,8 +21,16 @@ export interface AutoPdfRegenerationJobPayload {
   requestedBy: "system" | "user";
 }
 
+export interface InvestigatorResearchRunJobPayload {
+  tenantId: string;
+  dossierId: string;
+  runId: string;
+  runKind: RunKind;
+}
+
 export interface JobQueuePayloadByName {
   auto_pdf_regeneration: AutoPdfRegenerationJobPayload;
+  investigator_research_run: InvestigatorResearchRunJobPayload;
 }
 
 export interface EnqueueJobOptions {

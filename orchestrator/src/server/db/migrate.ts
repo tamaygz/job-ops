@@ -1178,6 +1178,160 @@ const migrations = [
    ON post_application_messages(provider, account_key, processing_status)`,
 
   `PRAGMA foreign_keys = ON`,
+
+  // ---------------------------------------------------------------------------
+  // Investigator tables (INV-002)
+  // ---------------------------------------------------------------------------
+
+  `CREATE TABLE IF NOT EXISTS investigator_dossiers (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    company_name TEXT NOT NULL,
+    canonical_company_key TEXT NOT NULL,
+    company_url TEXT,
+    normalized_domain TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','watchlist','interviewing','archived','declined')),
+    tags TEXT,
+    last_researched_at INTEGER,
+    created_from_job_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE(tenant_id, canonical_company_key)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS investigator_dossier_jobs (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    dossier_id TEXT NOT NULL,
+    job_id TEXT NOT NULL,
+    link_reason TEXT NOT NULL CHECK(link_reason IN ('seeded','manual','suggested')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE(tenant_id, dossier_id, job_id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS investigator_research_runs (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    dossier_id TEXT NOT NULL,
+    run_kind TEXT NOT NULL CHECK(run_kind IN ('company_brief','people_scan','dossier_refresh')),
+    status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','running','completed','partial_failed','failed','cancelled')),
+    initiated_by TEXT NOT NULL DEFAULT 'user' CHECK(initiated_by IN ('user','system')),
+    seed_context TEXT,
+    started_at INTEGER,
+    completed_at INTEGER,
+    error_code TEXT,
+    error_message TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS investigator_sources (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    dossier_id TEXT NOT NULL,
+    run_id TEXT,
+    source_type TEXT NOT NULL CHECK(source_type IN ('company_site','news_article','public_profile','github_profile','review_site','salary_site','job_metadata','manual_note','other_web_page')),
+    title TEXT NOT NULL,
+    url TEXT,
+    source_host TEXT,
+    captured_excerpt TEXT NOT NULL,
+    retrieved_at INTEGER NOT NULL,
+    review_state TEXT NOT NULL DEFAULT 'unreviewed' CHECK(review_state IN ('unreviewed','verified','low_confidence','outdated','rejected')),
+    reviewer_note TEXT,
+    content_hash TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS investigator_people (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    dossier_id TEXT NOT NULL,
+    run_id TEXT,
+    full_name TEXT NOT NULL,
+    person_type TEXT NOT NULL CHECK(person_type IN ('recruiter','hiring_manager','interviewer','executive','founder','employee')),
+    title TEXT,
+    profile_url TEXT,
+    role_context TEXT,
+    notes TEXT,
+    confidence_label TEXT NOT NULL CHECK(confidence_label IN ('high','medium','low','unknown')),
+    source_ids TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS investigator_salary_observations (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    dossier_id TEXT NOT NULL,
+    run_id TEXT,
+    role_scope TEXT,
+    geo_scope TEXT,
+    currency TEXT,
+    pay_interval TEXT CHECK(pay_interval IN ('annual','monthly','hourly','unknown')),
+    min_amount REAL,
+    max_amount REAL,
+    equity_text TEXT,
+    bonus_text TEXT,
+    confidence_label TEXT NOT NULL CHECK(confidence_label IN ('high','medium','low','unknown')),
+    source_id TEXT,
+    observed_at INTEGER,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS investigator_summaries (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    dossier_id TEXT NOT NULL,
+    run_id TEXT,
+    summary_type TEXT NOT NULL CHECK(summary_type IN ('company_brief','people_brief','interview_angles')),
+    title TEXT NOT NULL,
+    body_markdown TEXT NOT NULL,
+    facts_json TEXT NOT NULL,
+    hypotheses_json TEXT NOT NULL,
+    review_state TEXT NOT NULL DEFAULT 'draft' CHECK(review_state IN ('draft','reviewed')),
+    version INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS investigator_timeline_events (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    dossier_id TEXT NOT NULL,
+    run_id TEXT,
+    event_type TEXT NOT NULL CHECK(event_type IN ('dossier_created','job_linked','run_started','run_completed','run_partial_failed','run_failed','source_saved','source_reviewed','person_saved','salary_saved','summary_saved','status_changed','dossier_merged')),
+    payload TEXT NOT NULL,
+    occurred_at INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_investigator_dossiers_tenant_canonical_key_unique ON investigator_dossiers(tenant_id, canonical_company_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_dossiers_tenant_status ON investigator_dossiers(tenant_id, status)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_investigator_dossier_jobs_tenant_dossier_job_unique ON investigator_dossier_jobs(tenant_id, dossier_id, job_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_dossier_jobs_dossier_id ON investigator_dossier_jobs(dossier_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_research_runs_dossier_status ON investigator_research_runs(dossier_id, status)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_research_runs_tenant_status ON investigator_research_runs(tenant_id, status)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_sources_dossier_id ON investigator_sources(dossier_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_sources_dossier_review_state ON investigator_sources(dossier_id, review_state)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_people_dossier_id ON investigator_people(dossier_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_people_dossier_person_type ON investigator_people(dossier_id, person_type)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_salary_observations_dossier_id ON investigator_salary_observations(dossier_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_summaries_dossier_summary_type ON investigator_summaries(dossier_id, summary_type)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_timeline_events_dossier_occurred_at ON investigator_timeline_events(dossier_id, occurred_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_investigator_timeline_events_dossier_event_type ON investigator_timeline_events(dossier_id, event_type)`,
 ];
 
 console.log("🔧 Running database migrations...");

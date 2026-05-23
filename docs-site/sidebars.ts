@@ -41,6 +41,7 @@ const sidebars: SidebarsConfig = {
         "features/visa-sponsors",
         "features/tracer-links",
         "features/watchlist",
+        "features/investigator",
       ],
     },
     {
