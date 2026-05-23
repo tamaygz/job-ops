@@ -1,5 +1,5 @@
 import { AppError } from "@infra/errors";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Scraper tests mock the scraper's internal strategies.
@@ -8,10 +8,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * and testing the exported function's error handling contract.
  */
 describe("compare/scraper", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });
