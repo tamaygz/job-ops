@@ -102,6 +102,8 @@ Unreviewed sources do not affect summaries. Summary generation waits until you h
 
 Summaries are AI-generated briefs derived from the accepted sources on the dossier.
 
+You can tune the summary prompt globally in **Settings → Investigator**. That section controls how many reviewed sources are sent, how much of each excerpt is included, and the system prompt used for future summary generations.
+
 1. In the dossier, open the **Summary** panel.
 2. Click **Regenerate Summary** to produce a fresh summary from current accepted sources.
 3. Read and evaluate the output.

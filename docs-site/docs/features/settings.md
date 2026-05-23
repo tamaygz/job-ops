@@ -147,6 +147,14 @@ Defaults and constraints:
   - resetting restores the shared default templates
 - Existing writing-style, language, and scoring-instructions settings still matter because the default templates consume those values through placeholders
 
+### Investigator
+
+- Tune how dossier summaries are built from reviewed sources
+- Set how many sources are included in each investigator summary prompt
+- Set how many characters are taken from each captured excerpt
+- Override the investigator summary system prompt when you need a different analysis style
+- These settings affect future summary regenerations; existing saved summaries are not rewritten until you regenerate them
+
 ### Reactive Resume
 
 ![Reactive Resume settings section](/img/features/settings-reactive-resume-section.png)

@@ -23,6 +23,7 @@ import { ChatSettingsSection } from "@client/pages/settings/components/ChatSetti
 import { DangerZoneSection } from "@client/pages/settings/components/DangerZoneSection";
 import { DisplaySettingsSection } from "@client/pages/settings/components/DisplaySettingsSection";
 import { EnvironmentSettingsSection } from "@client/pages/settings/components/EnvironmentSettingsSection";
+import { InvestigatorSettingsSection } from "@client/pages/settings/components/InvestigatorSettingsSection";
 import { ModelSettingsSection } from "@client/pages/settings/components/ModelSettingsSection";
 import { PromptTemplatesSection } from "@client/pages/settings/components/PromptTemplatesSection";
 import { ReactiveResumeSection } from "@client/pages/settings/components/ReactiveResumeSection";
@@ -117,6 +118,9 @@ const DEFAULT_FORM_VALUES: UpdateSettingsInput = {
   ghostwriterSystemPromptTemplate: "",
   tailoringPromptTemplate: "",
   scoringPromptTemplate: "",
+  investigatorSummarySystemPromptTemplate: "",
+  investigatorSummarySourceLimit: null,
+  investigatorSummaryExcerptMaxChars: null,
 };
 
 type LlmProviderValue = LlmProviderId | null;
@@ -137,6 +141,7 @@ type SettingsSectionId =
   | "model"
   | "chat"
   | "prompt-templates"
+  | "investigator"
   | "scoring"
   | "reactive-resume"
   | "webhooks"
@@ -201,6 +206,12 @@ const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
         description:
           "Base AI instructions for Ghostwriter, tailoring, and scoring.",
         searchTerms: ["prompt", "templates", "system prompt", "instructions"],
+      },
+      {
+        id: "investigator",
+        label: "Investigator",
+        description: "Summary prompt defaults and evidence limits.",
+        searchTerms: ["investigator", "dossier", "research", "summary"],
       },
     ],
   },
@@ -336,6 +347,11 @@ const SECTION_FIELD_MAP: Record<
     "ghostwriterSystemPromptTemplate",
     "tailoringPromptTemplate",
     "scoringPromptTemplate",
+  ],
+  investigator: [
+    "investigatorSummarySystemPromptTemplate",
+    "investigatorSummarySourceLimit",
+    "investigatorSummaryExcerptMaxChars",
   ],
   scoring: [
     "penalizeMissingSalary",
@@ -475,6 +491,9 @@ const NULL_SETTINGS_PAYLOAD: UpdateSettingsInput = {
   ghostwriterSystemPromptTemplate: null,
   tailoringPromptTemplate: null,
   scoringPromptTemplate: null,
+  investigatorSummarySystemPromptTemplate: null,
+  investigatorSummarySourceLimit: null,
+  investigatorSummaryExcerptMaxChars: null,
 };
 
 const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
@@ -534,6 +553,12 @@ const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
     data.ghostwriterSystemPromptTemplate.value ?? "",
   tailoringPromptTemplate: data.tailoringPromptTemplate.value ?? "",
   scoringPromptTemplate: data.scoringPromptTemplate.value ?? "",
+  investigatorSummarySystemPromptTemplate:
+    data.investigatorSummarySystemPromptTemplate.override ?? "",
+  investigatorSummarySourceLimit:
+    data.investigatorSummarySourceLimit.override,
+  investigatorSummaryExcerptMaxChars:
+    data.investigatorSummaryExcerptMaxChars.override,
 });
 
 const normalizeString = (value: string | null | undefined) => {
@@ -808,6 +833,24 @@ const getDerivedSettings = (settings: AppSettings | null) => {
         default: settings?.scoringPromptTemplate?.default ?? "",
       },
     },
+    investigator: {
+      systemPromptTemplate: {
+        effective:
+          settings?.investigatorSummarySystemPromptTemplate?.value ?? "",
+        default:
+          settings?.investigatorSummarySystemPromptTemplate?.default ?? "",
+      },
+      summarySourceLimit: {
+        effective: settings?.investigatorSummarySourceLimit?.value ?? 10,
+        default: settings?.investigatorSummarySourceLimit?.default ?? 10,
+      },
+      excerptMaxChars: {
+        effective:
+          settings?.investigatorSummaryExcerptMaxChars?.value ?? 500,
+        default:
+          settings?.investigatorSummaryExcerptMaxChars?.default ?? 500,
+      },
+    },
   };
 };
 
@@ -988,6 +1031,7 @@ export const SettingsPage: React.FC = () => {
     backup,
     scoring,
     promptTemplates,
+    investigator,
   } = derived;
 
   const handleCreateBackup = async () => {
@@ -1339,6 +1383,18 @@ export const SettingsPage: React.FC = () => {
           normalizeString(data.scoringPromptTemplate),
           promptTemplates.scoringPromptTemplate.default,
         ),
+        investigatorSummarySystemPromptTemplate: nullIfSame(
+          normalizeString(data.investigatorSummarySystemPromptTemplate),
+          investigator.systemPromptTemplate.default,
+        ),
+        investigatorSummarySourceLimit: nullIfSame(
+          data.investigatorSummarySourceLimit,
+          investigator.summarySourceLimit.default,
+        ),
+        investigatorSummaryExcerptMaxChars: nullIfSame(
+          data.investigatorSummaryExcerptMaxChars,
+          investigator.excerptMaxChars.default,
+        ),
         ...envPayload,
       };
 
@@ -1645,6 +1701,16 @@ export const SettingsPage: React.FC = () => {
       activeSectionContent = (
         <PromptTemplatesSection
           values={promptTemplates}
+          isLoading={isLoading}
+          isSaving={isSaving}
+          layoutMode="panel"
+        />
+      );
+      break;
+    case "investigator":
+      activeSectionContent = (
+        <InvestigatorSettingsSection
+          values={investigator}
           isLoading={isLoading}
           isSaving={isSaving}
           layoutMode="panel"

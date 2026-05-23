@@ -1,7 +1,8 @@
-import { useCancelRun } from "@client/hooks/queries/useInvestigatorMutations";
+﻿import { useCancelRun } from "@client/hooks/queries/useInvestigatorMutations";
 import { useRun, useRuns } from "@client/hooks/queries/useInvestigatorQueries";
 import { showErrorToast } from "@client/lib/error-toast";
 import type { InvestigatorResearchRun } from "@shared/types";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   CheckCircle2,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { queryKeys } from "@/client/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +60,7 @@ const ActiveRunPanel: React.FC<ActiveRunPanelProps> = ({
   );
   const [confirmCancel, setConfirmCancel] = useState(false);
   const cancelMutation = useCancelRun();
+  const queryClient = useQueryClient();
 
   // Poll every 3 s while active
   const _isActive = ACTIVE_RUN_STATUSES.has(initialRun.status);
@@ -87,6 +90,16 @@ const ActiveRunPanel: React.FC<ActiveRunPanelProps> = ({
     );
     return () => clearInterval(tick);
   }, [run.status, run.startedAt]);
+
+  // When run reaches a terminal state, invalidate all cached dossier data so
+  // tabs (Timeline, Sources, People, Salary, Summary) show fresh results
+  // without requiring a manual page reload.
+  useEffect(() => {
+    if (ACTIVE_RUN_STATUSES.has(run.status)) return;
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.investigator.all,
+    });
+  }, [run.status, queryClient]);
 
   const handleCancel = async () => {
     try {
@@ -189,15 +202,6 @@ const ActiveRunPanel: React.FC<ActiveRunPanelProps> = ({
         <p className="min-w-0 flex-1 text-sm font-medium text-emerald-200">
           Research complete — view results below
         </p>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1 text-xs"
-          onClick={() => window.location.reload()}
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
-        </Button>
         <Button
           variant="ghost"
           size="sm"

@@ -231,6 +231,9 @@ export interface AppSettings {
   ghostwriterStopSlopEnabled: Resolved<boolean>;
   tailoringPromptTemplate: Resolved<string>;
   scoringPromptTemplate: Resolved<string>;
+  investigatorSummarySystemPromptTemplate: Resolved<string>;
+  investigatorSummarySourceLimit: Resolved<number>;
+  investigatorSummaryExcerptMaxChars: Resolved<number>;
   searchCities: Resolved<string>;
   locationSearchScope: Resolved<LocationSearchScope>;
   locationMatchStrictness: Resolved<LocationMatchStrictness>;

@@ -78,3 +78,9 @@ export type PromptTemplatesValues = {
   tailoringPromptTemplate: EffectiveDefault<string>;
   scoringPromptTemplate: EffectiveDefault<string>;
 };
+
+export type InvestigatorValues = {
+  summarySourceLimit: EffectiveDefault<number>;
+  excerptMaxChars: EffectiveDefault<number>;
+  systemPromptTemplate: EffectiveDefault<string>;
+};
