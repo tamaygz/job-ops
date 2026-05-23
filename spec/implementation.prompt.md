@@ -2,21 +2,21 @@ You are implementing issue {ISSUE_NUMBER} for the JobOps Investigator feature.
 
 ## Required Reading (in order)
 
-1. **PRD**: `/home/runner/work/job-ops/job-ops/spec/iinvestigator.prd.md`
+1. **PRD**: `spec/iinvestigator.prd.md`
    - Read sections 2-4 for goals, requirements, and user experience
    - Understand the "why" behind the feature
 
-2. **Spec**: `/home/runner/work/job-ops/job-ops/spec/spec-design-investigator-feature.md`
+2. **Spec**: `spec/spec-design-investigator-feature.md`
    - Read sections 3-4 for requirements, constraints, and data contracts
    - This is your technical authority
 
-3. **Issue File**: `/home/runner/work/job-ops/job-ops/spec/issues/INV-{ISSUE_NUMBER}.md`
+3. **Issue File**: `spec/issues/INV-{ISSUE_NUMBER}.md`
    - This is your specific work scope
    - Complete ALL acceptance criteria
    - Follow ALL technical implementation notes
    - Respect the "Out of Scope" section
 
-4. **Codebase Patterns**: `/home/runner/work/job-ops/job-ops/AGENTS.md`
+4. **Codebase Patterns**: `AGENTS.md`
    - Read the entire file to understand established patterns
    - Pay special attention to:
      - API response contract (mandatory helpers)
