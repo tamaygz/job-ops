@@ -11,6 +11,11 @@ const sidebars: SidebarsConfig = {
         "getting-started/gmail-oauth-setup",
         "getting-started/o365-oauth-setup",
         "getting-started/imap-setup",
+      ],
+    },
+    {
+      type: "category",
+      label: "Workflows",
       items: [
         "workflows/find-jobs-and-apply-workflow",
         "workflows/post-application-workflow",
