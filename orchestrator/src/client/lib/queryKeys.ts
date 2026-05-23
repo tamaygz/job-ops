@@ -1,4 +1,8 @@
-import type { JobStatus, PostApplicationProvider } from "@shared/types";
+import type {
+  InvestigatorDossierListFilters,
+  JobStatus,
+  PostApplicationProvider,
+} from "@shared/types";
 
 export const queryKeys = {
   designResume: {
@@ -127,5 +131,36 @@ export const queryKeys = {
   backups: {
     all: ["backups"] as const,
     list: () => [...queryKeys.backups.all, "list"] as const,
+  },
+  investigator: {
+    all: ["investigator"] as const,
+    dossiers: (filters?: InvestigatorDossierListFilters) =>
+      [...queryKeys.investigator.all, "dossiers", filters ?? {}] as const,
+    dossier: (dossierId: string) =>
+      [...queryKeys.investigator.all, "dossier", dossierId] as const,
+    runs: (dossierId: string) =>
+      [...queryKeys.investigator.all, "runs", dossierId] as const,
+    run: (dossierId: string, runId: string) =>
+      [...queryKeys.investigator.all, "run", dossierId, runId] as const,
+    sources: (dossierId: string) =>
+      [...queryKeys.investigator.all, "sources", dossierId] as const,
+    people: (dossierId: string) =>
+      [...queryKeys.investigator.all, "people", dossierId] as const,
+    salary: (dossierId: string) =>
+      [...queryKeys.investigator.all, "salary", dossierId] as const,
+    summaries: (dossierId: string, opts?: { latestOnly?: boolean }) =>
+      [
+        ...queryKeys.investigator.all,
+        "summaries",
+        dossierId,
+        opts ?? {},
+      ] as const,
+    timeline: (dossierId: string, opts?: { limit?: number; before?: number }) =>
+      [
+        ...queryKeys.investigator.all,
+        "timeline",
+        dossierId,
+        opts ?? {},
+      ] as const,
   },
 } as const;
