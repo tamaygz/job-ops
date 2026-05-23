@@ -155,6 +155,8 @@ export const queryKeys = {
         dossierId,
         opts ?? {},
       ] as const,
+    linkedJobs: (dossierId: string) =>
+      [...queryKeys.investigator.all, "linked-jobs", dossierId] as const,
     timeline: (dossierId: string, opts?: { limit?: number; before?: number }) =>
       [
         ...queryKeys.investigator.all,

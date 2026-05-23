@@ -3,14 +3,20 @@ import {
   useEditSummary,
   useRegenerateSummary,
 } from "@client/hooks/queries/useInvestigatorMutations";
-import { useSummaries } from "@client/hooks/queries/useInvestigatorQueries";
+import {
+  useLinkedJobs,
+  useSummaries,
+} from "@client/hooks/queries/useInvestigatorQueries";
+import { useCreateJobNoteMutation } from "@client/hooks/queries/useJobMutations";
 import { showErrorToast } from "@client/lib/error-toast";
 import type {
+  InvestigatorLinkedJob,
   InvestigatorStatement,
   InvestigatorSummary,
   SummaryType,
 } from "@shared/types";
 import {
+  BookmarkPlus,
   Check,
   ChevronDown,
   ChevronRight,
@@ -21,8 +27,22 @@ import {
   X,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const SUMMARY_TYPE_ORDER: SummaryType[] = [
   "company_brief",
@@ -102,19 +122,28 @@ interface SummaryCardProps {
   dossierId: string;
   summaryType: SummaryType;
   summary: InvestigatorSummary | undefined;
+  linkedJobs: InvestigatorLinkedJob[];
+  sourceJobId?: string;
 }
 
 const SummaryCard: React.FC<SummaryCardProps> = ({
   dossierId,
   summaryType,
   summary,
+  linkedJobs,
+  sourceJobId,
 }) => {
   const [editing, setEditing] = useState(false);
   const [draftMarkdown, setDraftMarkdown] = useState("");
+  const [selectedText, setSelectedText] = useState("");
+  const [promoDialogOpen, setPromoDialogOpen] = useState(false);
+  const [promoJobId, setPromoJobId] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
   const config = SUMMARY_TYPE_CONFIG[summaryType];
 
   const regenerateMutation = useRegenerateSummary();
   const editMutation = useEditSummary();
+  const createNoteMutation = useCreateJobNoteMutation();
 
   const handleRegenerate = async () => {
     try {
@@ -130,6 +159,42 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   const handleEditStart = () => {
     setDraftMarkdown(summary?.bodyMarkdown ?? "");
     setEditing(true);
+  };
+
+  const handleSelectionChange = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !containerRef.current) return;
+    if (containerRef.current.contains(sel.anchorNode)) {
+      const text = sel.toString().trim();
+      if (text) setSelectedText(text);
+    }
+  };
+
+  const handleOpenPromoDialog = () => {
+    const defaultJobId =
+      sourceJobId && linkedJobs.some((j) => j.jobId === sourceJobId)
+        ? sourceJobId
+        : (linkedJobs[0]?.jobId ?? "");
+    setPromoJobId(defaultJobId);
+    setPromoDialogOpen(true);
+  };
+
+  const handlePromote = async () => {
+    if (!selectedText || !promoJobId) return;
+    try {
+      await createNoteMutation.mutateAsync({
+        jobId: promoJobId,
+        input: {
+          title: "Promoted from Investigator",
+          content: `---\n${selectedText}`,
+        },
+      });
+      setPromoDialogOpen(false);
+      setSelectedText("");
+      window.getSelection()?.removeAllRanges();
+    } catch (err) {
+      showErrorToast(err, "Failed to promote to job notes");
+    }
   };
 
   const handleEditSave = async () => {
@@ -158,6 +223,23 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
           {config.label}
         </h3>
         <div className="flex items-center gap-2 shrink-0">
+          {summary && !editing && linkedJobs.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 text-xs"
+              onClick={handleOpenPromoDialog}
+              disabled={!selectedText}
+              title={
+                selectedText
+                  ? "Promote selected text to job notes"
+                  : "Select text to promote to job notes"
+              }
+            >
+              <BookmarkPlus className="h-3.5 w-3.5" />
+              Promote
+            </Button>
+          )}
           {summary && !editing && (
             <Button
               size="sm"
@@ -220,7 +302,13 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
         </div>
       ) : (
         <>
-          <div className="prose dark:prose-invert prose-sm max-w-none text-foreground">
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: selection detection only, no keyboard interaction intended */}
+          <div
+            ref={containerRef}
+            className="prose dark:prose-invert prose-sm max-w-none text-foreground"
+            onMouseUp={handleSelectionChange}
+            onKeyUp={handleSelectionChange}
+          >
             <JobDescriptionMarkdown description={summary.bodyMarkdown} />
           </div>
           <StatementList
@@ -242,20 +330,82 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
           <span>Last updated {formatDate(summary.updatedAt)}</span>
         </div>
       )}
+
+      {/* Promote to job notes dialog */}
+      <Dialog open={promoDialogOpen} onOpenChange={setPromoDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Promote to Job Notes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Append the selected text as a new note.
+            </p>
+            {linkedJobs.length > 1 && (
+              <Select value={promoJobId} onValueChange={setPromoJobId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a job" />
+                </SelectTrigger>
+                <SelectContent>
+                  {linkedJobs.map((j) => (
+                    <SelectItem key={j.jobId} value={j.jobId}>
+                      {j.title} — {j.employer}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {linkedJobs.length === 1 && (
+              <p className="text-sm font-medium">
+                {linkedJobs[0].title} — {linkedJobs[0].employer}
+              </p>
+            )}
+            <blockquote className="border-l-2 pl-3 text-xs text-muted-foreground italic line-clamp-4">
+              {selectedText}
+            </blockquote>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPromoDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handlePromote()}
+              disabled={createNoteMutation.isPending || !promoJobId}
+            >
+              {createNoteMutation.isPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <BookmarkPlus className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Add Note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 interface SummaryPanelProps {
   dossierId: string;
+  sourceJobId?: string;
 }
 
-export const SummaryPanel: React.FC<SummaryPanelProps> = ({ dossierId }) => {
+export const SummaryPanel: React.FC<SummaryPanelProps> = ({
+  dossierId,
+  sourceJobId,
+}) => {
   const { data: summaries, isLoading } = useSummaries(
     dossierId,
     { latestOnly: true },
     { enabled: true },
   );
+  const { data: linkedJobs = [] } = useLinkedJobs(dossierId);
 
   const summaryByType = new Map<SummaryType, InvestigatorSummary>();
   for (const s of summaries ?? []) {
@@ -280,6 +430,8 @@ export const SummaryPanel: React.FC<SummaryPanelProps> = ({ dossierId }) => {
           dossierId={dossierId}
           summaryType={summaryType}
           summary={summaryByType.get(summaryType)}
+          linkedJobs={linkedJobs}
+          sourceJobId={sourceJobId}
         />
       ))}
     </div>

@@ -8,6 +8,7 @@ import type {
   InvestigatorDossier,
   InvestigatorDossierListFilters,
   InvestigatorDossierListItem,
+  InvestigatorLinkedJob,
   LinkReason,
   UpdateInvestigatorDossierInput,
 } from "@shared/types";
@@ -200,4 +201,12 @@ export async function getDossier(
   const dossier = await dossierRepo.findById(dossierId);
   if (!dossier) throw notFound(`Dossier ${dossierId} not found`);
   return dossier;
+}
+
+export async function listLinkedJobsForDossier(
+  dossierId: string,
+): Promise<InvestigatorLinkedJob[]> {
+  const dossier = await dossierRepo.findById(dossierId);
+  if (!dossier) throw notFound(`Dossier ${dossierId} not found`);
+  return dossierRepo.listLinkedJobsWithDetails(dossierId);
 }

@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -360,6 +360,9 @@ type ActiveTab = "summary" | "sources" | "people" | "salary" | "timeline";
 export const InvestigatorDetailPage: React.FC = () => {
   const { dossierId = "" } = useParams<{ dossierId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const sourceJobId = (location.state as { sourceJobId?: string } | null)
+    ?.sourceJobId;
   const [activeTab, setActiveTab] = useState<ActiveTab>("summary");
   const [startRunOpen, setStartRunOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -516,7 +519,7 @@ export const InvestigatorDetailPage: React.FC = () => {
           </TabsList>
 
           <TabsContent value="summary" className="space-y-4">
-            <SummaryPanel dossierId={dossierId} />
+            <SummaryPanel dossierId={dossierId} sourceJobId={sourceJobId} />
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-4">

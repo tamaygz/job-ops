@@ -217,6 +217,32 @@ dossiersRouter.patch(
 );
 
 // ---------------------------------------------------------------------------
+// GET /api/investigator/dossiers/:dossierId/jobs
+// ---------------------------------------------------------------------------
+
+dossiersRouter.get(
+  "/:dossierId/jobs",
+  asyncRoute(async (req: Request, res: Response) => {
+    const parsed = dossiersParamsSchema.safeParse(req.params);
+    if (!parsed.success) {
+      return fail(
+        res,
+        badRequest("Invalid dossier id", parsed.error.flatten()),
+      );
+    }
+
+    try {
+      const jobs = await dossierService.listLinkedJobsForDossier(
+        parsed.data.dossierId,
+      );
+      return ok(res, jobs);
+    } catch (err) {
+      return fail(res, toAppError(err));
+    }
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // POST /api/investigator/dossiers/:dossierId/jobs
 // ---------------------------------------------------------------------------
 

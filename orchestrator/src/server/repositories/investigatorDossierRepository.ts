@@ -3,13 +3,14 @@ import type {
   InvestigatorDossier,
   InvestigatorDossierListFilters,
   InvestigatorDossierListItem,
+  InvestigatorLinkedJob,
   LinkReason,
 } from "@shared/types";
 import { and, asc, desc, eq, like, ne, sql } from "drizzle-orm";
 import { db, schema } from "../db/index";
 import { getActiveTenantId } from "../tenancy/context";
 
-const { investigatorDossiers, investigatorDossierJobs } = schema;
+const { investigatorDossiers, investigatorDossierJobs, jobs } = schema;
 
 export type DossierUpdateData = {
   companyName?: string;
@@ -283,5 +284,32 @@ export async function listLinkedJobs(
   return rows.map((r) => ({
     jobId: r.jobId,
     linkReason: r.linkReason as LinkReason,
+  }));
+}
+
+export async function listLinkedJobsWithDetails(
+  dossierId: string,
+): Promise<InvestigatorLinkedJob[]> {
+  const tenantId = getActiveTenantId();
+  const rows = await db
+    .select({
+      jobId: investigatorDossierJobs.jobId,
+      linkReason: investigatorDossierJobs.linkReason,
+      title: jobs.title,
+      employer: jobs.employer,
+    })
+    .from(investigatorDossierJobs)
+    .innerJoin(jobs, eq(jobs.id, investigatorDossierJobs.jobId))
+    .where(
+      and(
+        eq(investigatorDossierJobs.tenantId, tenantId),
+        eq(investigatorDossierJobs.dossierId, dossierId),
+      ),
+    );
+  return rows.map((r) => ({
+    jobId: r.jobId,
+    linkReason: r.linkReason as LinkReason,
+    title: r.title,
+    employer: r.employer,
   }));
 }

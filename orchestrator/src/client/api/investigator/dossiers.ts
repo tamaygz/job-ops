@@ -3,6 +3,7 @@ import type {
   InvestigatorDossier,
   InvestigatorDossierListFilters,
   InvestigatorDossierListItem,
+  InvestigatorLinkedJob,
   UpdateInvestigatorDossierInput,
 } from "@shared/types";
 import { fetchApi, withQuery } from "../core";
@@ -28,6 +29,14 @@ export function listDossiers(
 
 export function getDossier(id: string): Promise<InvestigatorDossier> {
   return fetchApi<InvestigatorDossier>(`/investigator/dossiers/${id}`);
+}
+
+export function listLinkedJobs(
+  dossierId: string,
+): Promise<InvestigatorLinkedJob[]> {
+  return fetchApi<InvestigatorLinkedJob[]>(
+    `/investigator/dossiers/${dossierId}/jobs`,
+  );
 }
 
 export function createDossier(

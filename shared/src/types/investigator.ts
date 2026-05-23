@@ -151,6 +151,14 @@ export interface InvestigatorDossier {
   updatedAt: string;
 }
 
+/** Minimal job info returned when listing jobs linked to a dossier. */
+export interface InvestigatorLinkedJob {
+  jobId: string;
+  title: string;
+  employer: string;
+  linkReason: LinkReason;
+}
+
 /** Lightweight projection used in list views — no heavy nested arrays. */
 export interface InvestigatorDossierListItem {
   id: string;

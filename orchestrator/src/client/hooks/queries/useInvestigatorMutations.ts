@@ -89,6 +89,18 @@ export function useUnlinkJob() {
   });
 }
 
+export function useCreateDossierFromJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) => investigatorApi.createDossierFromJob(jobId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.investigator.dossiers(),
+      });
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Run mutations
 // ---------------------------------------------------------------------------

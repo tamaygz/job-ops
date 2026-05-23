@@ -117,3 +117,18 @@ export function useTimeline(
     enabled: options?.enabled,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Linked jobs
+// ---------------------------------------------------------------------------
+
+export function useLinkedJobs(
+  dossierId: string,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: queryKeys.investigator.linkedJobs(dossierId),
+    queryFn: () => investigatorApi.listLinkedJobs(dossierId),
+    enabled: options?.enabled,
+  });
+}
