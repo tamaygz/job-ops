@@ -982,9 +982,10 @@ export const investigatorResearchRuns = sqliteTable(
     dossierStatusIndex: index(
       "idx_investigator_research_runs_dossier_status",
     ).on(table.dossierId, table.status),
-    tenantStatusIndex: index(
-      "idx_investigator_research_runs_tenant_status",
-    ).on(table.tenantId, table.status),
+    tenantStatusIndex: index("idx_investigator_research_runs_tenant_status").on(
+      table.tenantId,
+      table.status,
+    ),
   }),
 );
 
@@ -1114,9 +1115,9 @@ export const investigatorSalaryObservations = sqliteTable(
     updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
   },
   (table) => ({
-    dossierIndex: index(
-      "idx_investigator_salary_observations_dossier_id",
-    ).on(table.dossierId),
+    dossierIndex: index("idx_investigator_salary_observations_dossier_id").on(
+      table.dossierId,
+    ),
   }),
 );
 
@@ -1178,6 +1179,8 @@ export const investigatorTimelineEvents = sqliteTable(
         "summary_saved",
         "status_changed",
         "dossier_merged",
+        "url_fetched",
+        "search_queried",
       ],
     }).notNull(),
     payload: text("payload", { mode: "json" }).notNull(),

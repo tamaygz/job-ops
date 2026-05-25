@@ -8,70 +8,11 @@ import type React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "../layout";
-
-const EVENT_LABELS: Record<TimelineEventType, string> = {
-  dossier_created: "Dossier created",
-  job_linked: "Job linked",
-  run_started: "Research run started",
-  run_completed: "Research run completed",
-  run_partial_failed: "Research run partially failed",
-  run_failed: "Research run failed",
-  source_saved: "Source saved",
-  source_reviewed: "Source reviewed",
-  person_saved: "Person saved",
-  salary_saved: "Salary observation saved",
-  summary_saved: "Summary saved",
-  status_changed: "Status changed",
-  dossier_merged: "Dossier merged",
-};
-
-function formatOccurredAt(timestampSeconds: number): string {
-  return new Date(timestampSeconds * 1000).toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function summarizePayload(payload: Record<string, unknown>): string | null {
-  const entries = Object.entries(payload).filter(([, value]) => {
-    if (value === null || value === undefined) {
-      return false;
-    }
-    return !(typeof value === "string" && value.trim().length === 0);
-  });
-
-  if (entries.length === 0) {
-    return null;
-  }
-
-  return entries
-    .slice(0, 3)
-    .map(([key, value]) => `${startCase(key)}: ${formatValue(value)}`)
-    .join(" • ");
-}
-
-function startCase(value: string): string {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ")
-    .replace(/^./, (char) => char.toUpperCase());
-}
-
-function formatValue(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    return value.join(", ");
-  }
-  return "View details";
-}
+import {
+  formatTimelineEventLabel,
+  formatTimelineOccurredAt,
+  summarizeTimelinePayload,
+} from "./timelineFormatting";
 
 function getEventTone(eventType: TimelineEventType): string {
   switch (eventType) {
@@ -87,15 +28,22 @@ function getEventTone(eventType: TimelineEventType): string {
   }
 }
 
-const TimelineRow: React.FC<{ event: InvestigatorTimelineEvent }> = ({ event }) => {
-  const payloadSummary = summarizePayload(event.payload);
+const TimelineRow: React.FC<{ event: InvestigatorTimelineEvent }> = ({
+  event,
+}) => {
+  const payloadSummary = summarizeTimelinePayload(event.payload);
 
   return (
-    <div className={cn("rounded-lg border px-4 py-3", getEventTone(event.eventType))}>
+    <div
+      className={cn(
+        "rounded-lg border px-4 py-3",
+        getEventTone(event.eventType),
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-medium">
-            {EVENT_LABELS[event.eventType] ?? startCase(event.eventType)}
+            {formatTimelineEventLabel(event.eventType)}
           </p>
           {payloadSummary ? (
             <p className="text-xs text-muted-foreground">{payloadSummary}</p>
@@ -103,14 +51,16 @@ const TimelineRow: React.FC<{ event: InvestigatorTimelineEvent }> = ({ event }) 
         </div>
         <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
           <Clock3 className="h-3.5 w-3.5" />
-          <span>{formatOccurredAt(event.occurredAt)}</span>
+          <span>{formatTimelineOccurredAt(event.occurredAt)}</span>
         </div>
       </div>
     </div>
   );
 };
 
-export const TimelinePanel: React.FC<{ dossierId: string }> = ({ dossierId }) => {
+export const TimelinePanel: React.FC<{ dossierId: string }> = ({
+  dossierId,
+}) => {
   const {
     data: events,
     isLoading,
@@ -149,7 +99,9 @@ export const TimelinePanel: React.FC<{ dossierId: string }> = ({ dossierId }) =>
               onClick={() => void refetch()}
               disabled={isFetching}
             >
-              <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+              <RefreshCw
+                className={cn("h-3.5 w-3.5", isFetching && "animate-spin")}
+              />
               Retry
             </Button>
           </div>

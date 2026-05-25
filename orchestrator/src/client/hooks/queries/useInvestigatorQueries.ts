@@ -108,7 +108,7 @@ export function useSummaries(
 
 export function useTimeline(
   dossierId: string,
-  opts?: { limit?: number; before?: number },
+  opts?: { limit?: number; before?: number; runId?: string },
   options?: { enabled?: boolean },
 ) {
   return useQuery({
