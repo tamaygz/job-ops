@@ -100,6 +100,7 @@ describe("updateDossier", () => {
       companyName: "Beta, LLC",
     });
 
+    expect(dossierRepo.findById).toHaveBeenCalledWith("dossier-1");
     expect(dossierRepo.findByCanonicalKey).toHaveBeenCalledWith("beta llc");
     expect(dossierRepo.update).toHaveBeenCalledWith("dossier-1", {
       companyName: "Beta, LLC",
@@ -143,6 +144,7 @@ describe("updateDossier", () => {
     ).rejects.toMatchObject({
       code: "CONFLICT",
     });
+    expect(dossierRepo.findById).toHaveBeenCalledWith("dossier-1");
     expect(dossierRepo.update).not.toHaveBeenCalled();
   });
 
@@ -178,11 +180,13 @@ describe("updateDossier", () => {
 
     await updateDossier("dossier-1", { status: "archived" });
 
+    expect(dossierRepo.findById).toHaveBeenCalledWith("dossier-1");
     expect(timelineRepo.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         dossierId: "dossier-1",
         eventType: "status_changed",
         payload: { from: "active", to: "archived" },
+        occurredAt: expect.any(Number),
       }),
     );
   });
