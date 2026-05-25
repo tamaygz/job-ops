@@ -49,8 +49,8 @@ import type {
   ResumeProjectsSettings,
   ValidationResult,
   WebSearchProviderId,
-  WEB_SEARCH_PROVIDER_VALUES,
 } from "@shared/types.js";
+import { WEB_SEARCH_PROVIDER_VALUES } from "@shared/types.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Settings } from "lucide-react";
 import type React from "react";
