@@ -103,6 +103,10 @@ async function processQueuedRun(
           runKind: payload.runKind,
           dossier,
           seedContext: run.seedContext,
+          researchQuestion:
+            typeof (run.seedContext as Record<string, unknown> | null)?.researchQuestion === "string"
+              ? ((run.seedContext as Record<string, unknown>).researchQuestion as string)
+              : null,
         });
 
         const latest = await runRepo.findById(payload.runId);

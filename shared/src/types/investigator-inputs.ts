@@ -40,6 +40,7 @@ export interface UpdateInvestigatorDossierInput {
 export interface StartInvestigatorRunInput {
   runKind: RunKindType;
   seedContext?: Record<string, unknown> | null;
+  researchQuestion?: string | null;
 }
 
 export interface InvestigatorDossierListFilters {
@@ -138,6 +139,7 @@ export const StartInvestigatorRunInputSchema = z
   .object({
     runKind: z.enum(runKindValues as [RunKindType, ...RunKindType[]]),
     seedContext: z.record(z.unknown()).nullish(),
+    researchQuestion: z.string().max(500).nullish(),
   })
   .strict();
 
@@ -294,3 +296,89 @@ export const UpdateInvestigatorSalaryObservationInputSchema = z
     notes: z.string().nullish(),
   })
   .strict();
+
+// ---------------------------------------------------------------------------
+// Research question templates
+// ---------------------------------------------------------------------------
+
+export interface ResearchQuestionTemplate {
+  id: string;
+  label: string;
+  question: string;
+  scope: "people" | "company" | "both";
+}
+
+export const RESEARCH_QUESTION_TEMPLATES: ResearchQuestionTemplate[] = [
+  {
+    id: "person_expertise",
+    label: "Main expertise",
+    question: "What is this person's main area of expertise and professional background?",
+    scope: "people",
+  },
+  {
+    id: "person_interview_questions",
+    label: "Likely interview questions",
+    question: "What questions could this person ask me in an interview based on their background?",
+    scope: "people",
+  },
+  {
+    id: "person_impact",
+    label: "Company impact",
+    question: "What impact has this person had on the company and what are their key achievements?",
+    scope: "people",
+  },
+  {
+    id: "person_management_style",
+    label: "Management style",
+    question: "What can be inferred about this person's management or leadership style?",
+    scope: "people",
+  },
+  {
+    id: "person_recent_activity",
+    label: "Recent activity",
+    question: "What has this person been working on or talking about recently?",
+    scope: "people",
+  },
+  {
+    id: "person_connection_points",
+    label: "Connection points",
+    question: "What shared interests or talking points could I use to connect with this person?",
+    scope: "people",
+  },
+  {
+    id: "company_culture",
+    label: "Company culture",
+    question: "What is the company culture like and what do employees say about working there?",
+    scope: "company",
+  },
+  {
+    id: "company_challenges",
+    label: "Current challenges",
+    question: "What are the main challenges or problems this company is currently facing?",
+    scope: "company",
+  },
+  {
+    id: "company_recent_news",
+    label: "Recent news",
+    question: "What are the most important recent news and developments about this company?",
+    scope: "company",
+  },
+  {
+    id: "company_tech_stack",
+    label: "Tech stack & tools",
+    question: "What technologies, tools, and technical practices does this company use?",
+    scope: "company",
+  },
+  {
+    id: "company_growth",
+    label: "Growth & direction",
+    question: "What is the company's growth trajectory and strategic direction?",
+    scope: "company",
+  },
+  {
+    id: "company_interview_prep",
+    label: "Interview preparation",
+    question: "What should I know to prepare for an interview at this company?",
+    scope: "company",
+  },
+];

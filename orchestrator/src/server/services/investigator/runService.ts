@@ -37,10 +37,14 @@ export async function startRun(
   }
 
   const tenantId = getActiveTenantId();
+  const seedContext: Record<string, unknown> = {
+    ...(input.seedContext ?? {}),
+    ...(input.researchQuestion ? { researchQuestion: input.researchQuestion } : {}),
+  };
   const run = await runRepo.create({
     dossierId,
     runKind: input.runKind,
-    seedContext: input.seedContext ?? null,
+    seedContext: Object.keys(seedContext).length > 0 ? seedContext : null,
     initiatedBy: "user",
   });
 
