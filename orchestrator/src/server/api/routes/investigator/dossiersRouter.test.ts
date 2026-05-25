@@ -132,7 +132,7 @@ describe.sequential("Dossiers API routes", () => {
     expect(body.data.linkedJobs).toEqual([
       {
         jobId,
-        title: "Staff Engineer",
+        title: `Staff Engineer ${jobId}`,
         employer: "BetaCorp",
         linkReason: "manual",
       },
