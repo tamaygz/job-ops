@@ -5,6 +5,8 @@ import {
   unprocessableEntity,
 } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
+import { logger } from "@infra/logger";
+import { sanitizeError } from "@infra/sanitize";
 import { listCareerBoardSources } from "@server/config/career-boards";
 import * as jobsRepo from "@server/repositories/jobs";
 import * as watchlistRepo from "@server/repositories/watchlist";
@@ -25,6 +27,8 @@ import { type Request, type Response, Router } from "express";
 import { z } from "zod";
 
 export const watchlistRouter = Router();
+
+const log = logger.child({ route: "watchlist" });
 
 const WATCHLIST_SOURCE_TIMEOUT_MS = 30000;
 
@@ -463,7 +467,11 @@ watchlistRouter.put(
         companyName: selection.label ?? selection.careersUrl,
         companyUrl: selection.careersUrl,
       }));
-      await ensureDossiersForCompanies(companies);
+      try {
+        await ensureDossiersForCompanies(companies);
+      } catch (err) {
+        log.error("Failed to create investigator dossiers after saving watchlist sources", { error: sanitizeError(err) });
+      }
     }
 
     ok(res, getWatchlistSourcesPayload(catalogSources, selectedSources));
