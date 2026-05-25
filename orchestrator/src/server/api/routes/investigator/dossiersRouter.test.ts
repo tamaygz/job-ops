@@ -99,9 +99,17 @@ describe.sequential("Dossiers API routes", () => {
   // -------------------------------------------------------------------------
 
   it("fetches a dossier by id", async () => {
+    const jobId = await seedJob();
     const createRes = await createDossier();
     const created = await createRes.json();
     const id = created.data.id as string;
+
+    const linkRes = await fetch(dossiersUrl(`/${id}/jobs`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId, linkReason: "manual" }),
+    });
+    expect(linkRes.status).toBe(200);
 
     const res = await fetch(dossiersUrl(`/${id}`));
     const body = await res.json();
@@ -110,6 +118,14 @@ describe.sequential("Dossiers API routes", () => {
     expect(body.ok).toBe(true);
     expect(body.data.id).toBe(id);
     expect(body.data.companyName).toBe("Acme Corp");
+    expect(body.data.linkedJobs).toEqual([
+      {
+        jobId,
+        title: "Staff Engineer",
+        employer: "BetaCorp",
+        linkReason: "manual",
+      },
+    ]);
   });
 
   it("returns 404 for unknown dossier id", async () => {

@@ -6,6 +6,7 @@ import * as jobsRepo from "@server/repositories/jobs";
 import type {
   CreateInvestigatorDossierInput,
   InvestigatorDossier,
+  InvestigatorDossierDetail,
   InvestigatorDossierListFilters,
   InvestigatorDossierListItem,
   InvestigatorLinkedJob,
@@ -197,10 +198,11 @@ export async function listDossiers(
 
 export async function getDossier(
   dossierId: string,
-): Promise<InvestigatorDossier> {
+): Promise<InvestigatorDossierDetail> {
   const dossier = await dossierRepo.findById(dossierId);
   if (!dossier) throw notFound(`Dossier ${dossierId} not found`);
-  return dossier;
+  const linkedJobs = await dossierRepo.listLinkedJobsWithDetails(dossierId);
+  return { ...dossier, linkedJobs };
 }
 
 export async function listLinkedJobsForDossier(
