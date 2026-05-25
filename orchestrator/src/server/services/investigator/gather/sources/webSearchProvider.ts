@@ -83,11 +83,11 @@ export const webSearchProvider: InvestigatorProvider = {
       messageParts.push(`${search.failures.length} provider error(s)`);
     }
 
-      return {
-        status: "success",
-        createdCount: created,
-        message: messageParts.join(" | "),
-        warnings: warnings.length ? warnings : undefined,
-      };
+    return {
+      status: "success",
+      createdCount: created,
+      message: messageParts.join(" | "),
+      warnings: warnings.length ? warnings : undefined,
+    };
   },
 };
