@@ -262,26 +262,46 @@ export async function ensureDossiersForCompanies(
       continue;
     }
 
-    const dossier = await dossierRepo.create({
-      companyName: company.companyName,
-      canonicalCompanyKey: canonicalKey,
-      companyUrl: company.companyUrl ?? null,
-      normalizedDomain: extractDomain(company.companyUrl),
-      status: "watchlist",
-    });
-
-    await writeTimelineEvent({
-      dossierId: dossier.id,
-      eventType: "dossier_created",
-      payload: {
+    try {
+      const dossier = await dossierRepo.create({
         companyName: company.companyName,
-        canonicalKey,
-        source: "watchlist",
-      },
-      occurredAt: nowSeconds(),
-    });
+        canonicalCompanyKey: canonicalKey,
+        companyUrl: company.companyUrl ?? null,
+        normalizedDomain: extractDomain(company.companyUrl),
+        status: "watchlist",
+      });
 
-    created++;
+      created++;
+
+      try {
+        await writeTimelineEvent({
+          dossierId: dossier.id,
+          eventType: "dossier_created",
+          payload: {
+            companyName: company.companyName,
+            canonicalKey,
+            source: "watchlist",
+          },
+          occurredAt: nowSeconds(),
+        });
+      } catch (timelineErr) {
+        log.warn("Failed to write dossier_created timeline event", {
+          dossierId: dossier.id,
+          error: timelineErr,
+        });
+      }
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        err.message.toLowerCase().includes("unique constraint failed")
+      ) {
+        // A concurrent save created the same dossier between our pre-check and
+        // the insert — treat this as a skip rather than failing the whole save.
+        skipped++;
+      } else {
+        throw err;
+      }
+    }
   }
 
   log.info("Ensured dossiers for watchlist companies", { created, skipped });

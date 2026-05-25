@@ -21,7 +21,11 @@ vi.mock("@server/repositories/jobs", () => ({
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
-import { normalizeCanonicalKey, updateDossier } from "./dossierService";
+import {
+  ensureDossiersForCompanies,
+  normalizeCanonicalKey,
+  updateDossier,
+} from "./dossierService";
 
 describe("normalizeCanonicalKey", () => {
   it("strips punctuation and lowercases", () => {
@@ -189,5 +193,121 @@ describe("updateDossier", () => {
         occurredAt: expect.any(Number),
       }),
     );
+  });
+});
+
+const STUB_DOSSIER = {
+  id: "dossier-1",
+  tenantId: "tenant-1",
+  companyName: "Acme, Inc.",
+  canonicalCompanyKey: "acme inc",
+  companyUrl: null,
+  normalizedDomain: null,
+  status: "watchlist" as const,
+  tags: [],
+  lastResearchedAt: null,
+  createdFromJobId: null,
+  createdAt: "",
+  updatedAt: "",
+};
+
+describe("ensureDossiersForCompanies", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("skips companies whose dossier already exists", async () => {
+    vi.mocked(dossierRepo.findByCanonicalKey).mockResolvedValue(STUB_DOSSIER);
+
+    const result = await ensureDossiersForCompanies([
+      { companyName: "Acme, Inc.", companyUrl: null },
+    ]);
+
+    expect(result).toEqual({ created: 0, skipped: 1 });
+    expect(dossierRepo.create).not.toHaveBeenCalled();
+    expect(timelineRepo.insert).not.toHaveBeenCalled();
+  });
+
+  it("creates a new dossier and writes a timeline event for an unknown company", async () => {
+    vi.mocked(dossierRepo.findByCanonicalKey).mockResolvedValue(null);
+    vi.mocked(dossierRepo.create).mockResolvedValue({
+      ...STUB_DOSSIER,
+      id: "new-dossier",
+      companyName: "Beta Corp",
+      canonicalCompanyKey: "beta corp",
+    });
+
+    const result = await ensureDossiersForCompanies([
+      { companyName: "Beta Corp", companyUrl: "https://beta.example.com" },
+    ]);
+
+    expect(result).toEqual({ created: 1, skipped: 0 });
+    expect(dossierRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyName: "Beta Corp",
+        canonicalCompanyKey: "beta corp",
+        status: "watchlist",
+      }),
+    );
+    expect(timelineRepo.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dossierId: "new-dossier",
+        eventType: "dossier_created",
+        payload: expect.objectContaining({
+          companyName: "Beta Corp",
+          canonicalKey: "beta corp",
+          source: "watchlist",
+        }),
+        occurredAt: expect.any(Number),
+      }),
+    );
+  });
+
+  it("deduplicates companies with the same canonical key within the input", async () => {
+    vi.mocked(dossierRepo.findByCanonicalKey).mockResolvedValue(null);
+    vi.mocked(dossierRepo.create).mockResolvedValue({
+      ...STUB_DOSSIER,
+      id: "new-dossier",
+      companyName: "Acme Inc",
+      canonicalCompanyKey: "acme inc",
+    });
+
+    const result = await ensureDossiersForCompanies([
+      { companyName: "Acme Inc", companyUrl: null },
+      { companyName: "Acme, Inc.", companyUrl: null },
+    ]);
+
+    // Both entries share the same canonical key — only one dossier should be created.
+    expect(result).toEqual({ created: 1, skipped: 0 });
+    expect(dossierRepo.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a UNIQUE constraint error from a concurrent create as a skip", async () => {
+    vi.mocked(dossierRepo.findByCanonicalKey).mockResolvedValue(null);
+    vi.mocked(dossierRepo.create).mockRejectedValue(
+      new Error(
+        "UNIQUE constraint failed: investigator_dossiers.canonical_company_key",
+      ),
+    );
+
+    const result = await ensureDossiersForCompanies([
+      { companyName: "Race Corp", companyUrl: null },
+    ]);
+
+    expect(result).toEqual({ created: 0, skipped: 1 });
+    expect(timelineRepo.insert).not.toHaveBeenCalled();
+  });
+
+  it("re-throws non-UNIQUE errors", async () => {
+    vi.mocked(dossierRepo.findByCanonicalKey).mockResolvedValue(null);
+    vi.mocked(dossierRepo.create).mockRejectedValue(
+      new Error("disk I/O error"),
+    );
+
+    await expect(
+      ensureDossiersForCompanies([
+        { companyName: "Broken Corp", companyUrl: null },
+      ]),
+    ).rejects.toThrow("disk I/O error");
   });
 });
