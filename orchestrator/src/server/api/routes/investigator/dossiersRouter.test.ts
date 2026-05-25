@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -9,9 +8,11 @@ describe.sequential("Dossiers API routes", () => {
   let baseUrl: string;
   let closeDb: () => void;
   let tempDir: string;
+  let seededJobCounter = 0;
 
   beforeEach(async () => {
     ({ server, baseUrl, closeDb, tempDir } = await startServer());
+    seededJobCounter = 0;
   });
 
   afterEach(async () => {
@@ -42,7 +43,8 @@ describe.sequential("Dossiers API routes", () => {
   async function seedJob() {
     const { db, schema } = await import("@server/db");
     const now = new Date().toISOString();
-    const jobId = randomUUID();
+    seededJobCounter += 1;
+    const jobId = `test-job-fixture-${seededJobCounter}`;
     await db.insert(schema.jobs).values({
       id: jobId,
       source: "manual",
@@ -218,7 +220,7 @@ describe.sequential("Dossiers API routes", () => {
     const { db, schema } = await import("@server/db");
     const now = new Date().toISOString();
     await db.insert(schema.investigatorPeople).values({
-      id: randomUUID(),
+      id: "investigator-person-1",
       tenantId: "tenant_default",
       dossierId: withPeople.id,
       fullName: "Pat Recruiter",
