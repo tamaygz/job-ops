@@ -11,9 +11,10 @@ vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
+import type { InvestigatorDossier } from "@shared/types";
 import { listEvents, writeEvent } from "./timelineService";
 
-function makeDossier() {
+function makeDossier(): InvestigatorDossier {
   return {
     id: "dossier-1",
     tenantId: "tenant-1",
