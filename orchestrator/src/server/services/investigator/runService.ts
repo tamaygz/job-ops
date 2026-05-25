@@ -52,7 +52,7 @@ export async function startRun(
       runId: run.id,
       runKind: input.runKind,
     },
-    { dedupeKey: `${tenantId}:${run.id}` },
+    { dedupeKey: `${tenantId}:${dossierId}:${input.runKind}` },
   );
 
   await timelineRepo.insertEvent({

@@ -139,8 +139,15 @@ describe("runService", () => {
       );
       expect(mocks.enqueue).toHaveBeenCalledWith(
         "investigator_research_run",
-        expect.objectContaining({ dossierId: DOSSIER_ID, runId: RUN_ID }),
-        expect.any(Object),
+        expect.objectContaining({
+          tenantId: "tenant-test",
+          dossierId: DOSSIER_ID,
+          runId: RUN_ID,
+          runKind: "company_brief",
+        }),
+        {
+          dedupeKey: "tenant-test:dossier-unit-001:company_brief",
+        },
       );
       expect(mocks.insertEvent).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: "run_started", runId: RUN_ID }),
