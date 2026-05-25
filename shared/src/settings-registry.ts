@@ -85,6 +85,20 @@ export const DEFAULT_INVESTIGATOR_SUMMARY_SYSTEM_PROMPT =
   'three keys: "summary" (detailed markdown analysis), "facts" (string array of ' +
   'verifiable claims extracted from the sources), "hypotheses" (string array of ' +
   "plausible inferences not directly stated in the sources).";
+export const DEFAULT_INVESTIGATOR_SOURCE_PROVIDERS = [
+  "linked_jobs",
+  "company_site",
+  "bing_search",
+];
+export const DEFAULT_INVESTIGATOR_PEOPLE_PROVIDERS = ["source_text"];
+export const DEFAULT_INVESTIGATOR_SALARY_PROVIDERS = [
+  "job_metadata",
+  "source_text",
+];
+export const DEFAULT_INVESTIGATOR_BING_SEARCH_ENDPOINT =
+  "https://api.bing.microsoft.com/v7.0/search";
+export const DEFAULT_INVESTIGATOR_BING_SEARCH_MARKET = "en-US";
+export const DEFAULT_INVESTIGATOR_BING_SEARCH_RESULT_LIMIT = 8;
 
 export function getDefaultModelForProvider(
   provider: string | null | undefined,
@@ -642,6 +656,67 @@ export const settingsRegistry = {
     parse: parseNonEmptyStringOrNull,
     serialize: (value: string | null | undefined): string | null =>
       value ?? null,
+  },
+  investigatorSourceProviders: {
+    kind: "typed" as const,
+    schema: z.array(z.string().trim().min(1).max(100)).min(1),
+    default: (): string[] => DEFAULT_INVESTIGATOR_SOURCE_PROVIDERS,
+    parse: parseJsonArrayOrNull,
+    serialize: serializeNullableJsonArray,
+  },
+  investigatorPeopleProviders: {
+    kind: "typed" as const,
+    schema: z.array(z.string().trim().min(1).max(100)).min(1),
+    default: (): string[] => DEFAULT_INVESTIGATOR_PEOPLE_PROVIDERS,
+    parse: parseJsonArrayOrNull,
+    serialize: serializeNullableJsonArray,
+  },
+  investigatorSalaryProviders: {
+    kind: "typed" as const,
+    schema: z.array(z.string().trim().min(1).max(100)).min(1),
+    default: (): string[] => DEFAULT_INVESTIGATOR_SALARY_PROVIDERS,
+    parse: parseJsonArrayOrNull,
+    serialize: serializeNullableJsonArray,
+  },
+  investigatorBingSearchApiKey: {
+    kind: "secret" as const,
+    schema: z.string().trim().max(5000),
+    default: (): string | null =>
+      typeof process !== "undefined"
+        ? process.env.INVESTIGATOR_BING_SEARCH_API_KEY ||
+          process.env.BING_SEARCH_API_KEY ||
+          null
+        : null,
+    parse: parseNonEmptyStringOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
+  investigatorBingSearchEndpoint: {
+    kind: "typed" as const,
+    schema: z.string().trim().url().max(2000),
+    default: (): string => DEFAULT_INVESTIGATOR_BING_SEARCH_ENDPOINT,
+    parse: parseNonEmptyStringOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
+  investigatorBingSearchMarket: {
+    kind: "typed" as const,
+    schema: z.string().trim().max(20),
+    default: (): string => DEFAULT_INVESTIGATOR_BING_SEARCH_MARKET,
+    parse: parseNonEmptyStringOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
+  investigatorBingSearchResultLimit: {
+    kind: "typed" as const,
+    schema: z.number().int().min(1).max(50),
+    default: (): number => DEFAULT_INVESTIGATOR_BING_SEARCH_RESULT_LIMIT,
+    parse: (raw: string | undefined): number | null => {
+      const parsed = raw ? parseInt(raw, 10) : NaN;
+      if (Number.isNaN(parsed)) return null;
+      return Math.min(50, Math.max(1, parsed));
+    },
+    serialize: serializeNullableNumber,
   },
   investigatorSummarySourceLimit: {
     kind: "typed" as const,

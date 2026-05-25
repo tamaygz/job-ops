@@ -232,6 +232,13 @@ export interface AppSettings {
   tailoringPromptTemplate: Resolved<string>;
   scoringPromptTemplate: Resolved<string>;
   investigatorSummarySystemPromptTemplate: Resolved<string>;
+  investigatorSourceProviders: Resolved<string[]>;
+  investigatorPeopleProviders: Resolved<string[]>;
+  investigatorSalaryProviders: Resolved<string[]>;
+  investigatorBingSearchApiKey: Resolved<string | null>;
+  investigatorBingSearchEndpoint: Resolved<string>;
+  investigatorBingSearchMarket: Resolved<string>;
+  investigatorBingSearchResultLimit: Resolved<number>;
   investigatorSummarySourceLimit: Resolved<number>;
   investigatorSummaryExcerptMaxChars: Resolved<number>;
   searchCities: Resolved<string>;

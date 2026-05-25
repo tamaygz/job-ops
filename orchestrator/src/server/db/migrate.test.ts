@@ -99,6 +99,125 @@ describe.sequential("database migrations", () => {
     );
   });
 
+  it("creates all investigator tables with expected indexes and storage types", async () => {
+    tempDir = await mkdtemp(join(tmpdir(), "job-ops-migrate-"));
+    const script = `
+      import { join } from "node:path";
+      import { pathToFileURL } from "node:url";
+      import Database from "better-sqlite3";
+
+      const dbPath = join(process.env.DATA_DIR, "jobs.db");
+      await import(pathToFileURL(join(process.cwd(), "src/server/db/migrate.ts")).href);
+
+      const migratedDb = new Database(dbPath, { readonly: true });
+
+      function requireTable(tableName) {
+        const row = migratedDb
+          .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+          .get(tableName);
+        if (!row) {
+          throw new Error(\`Missing table: \${tableName}\`);
+        }
+      }
+
+      function requireColumnType(tableName, columnName, expectedType) {
+        const columns = migratedDb.prepare(\`PRAGMA table_info(\${tableName})\`).all();
+        const column = columns.find((candidate) => candidate.name === columnName);
+        if (!column) {
+          throw new Error(\`Missing column \${tableName}.\${columnName}\`);
+        }
+        if (String(column.type).toUpperCase() !== expectedType) {
+          throw new Error(
+            \`Expected \${tableName}.\${columnName} to be \${expectedType}, got \${column.type}\`,
+          );
+        }
+      }
+
+      function requireAuditTimestamps(tableName) {
+        const columns = migratedDb.prepare(\`PRAGMA table_info(\${tableName})\`).all();
+        for (const columnName of ["created_at", "updated_at"]) {
+          const column = columns.find((candidate) => candidate.name === columnName);
+          if (!column) {
+            throw new Error(\`Missing audit column \${tableName}.\${columnName}\`);
+          }
+          if (String(column.type).toUpperCase() !== "TEXT") {
+            throw new Error(\`Expected \${tableName}.\${columnName} to use TEXT storage\`);
+          }
+          if (!String(column.dflt_value ?? "").includes("datetime('now')")) {
+            throw new Error(\`Expected \${tableName}.\${columnName} to default to datetime('now')\`);
+          }
+        }
+      }
+
+      function requireIndex(tableName, indexName, expectedUnique) {
+        const indexes = migratedDb.prepare(\`PRAGMA index_list(\${tableName})\`).all();
+        const index = indexes.find((candidate) => candidate.name === indexName);
+        if (!index) {
+          throw new Error(\`Missing index \${indexName} on \${tableName}\`);
+        }
+        if (Boolean(index.unique) !== expectedUnique) {
+          throw new Error(
+            \`Expected index \${indexName} unique=\${expectedUnique}, got unique=\${index.unique}\`,
+          );
+        }
+      }
+
+      const investigatorTables = [
+        "investigator_dossiers",
+        "investigator_dossier_jobs",
+        "investigator_research_runs",
+        "investigator_sources",
+        "investigator_people",
+        "investigator_salary_observations",
+        "investigator_summaries",
+        "investigator_timeline_events",
+      ];
+
+      for (const tableName of investigatorTables) {
+        requireTable(tableName);
+        requireAuditTimestamps(tableName);
+      }
+
+      requireColumnType("investigator_dossiers", "tags", "TEXT");
+      requireColumnType("investigator_dossiers", "last_researched_at", "INTEGER");
+      requireColumnType("investigator_research_runs", "seed_context", "TEXT");
+      requireColumnType("investigator_research_runs", "started_at", "INTEGER");
+      requireColumnType("investigator_research_runs", "completed_at", "INTEGER");
+      requireColumnType("investigator_sources", "retrieved_at", "INTEGER");
+      requireColumnType("investigator_people", "source_ids", "TEXT");
+      requireColumnType("investigator_salary_observations", "observed_at", "INTEGER");
+      requireColumnType("investigator_summaries", "facts_json", "TEXT");
+      requireColumnType("investigator_summaries", "hypotheses_json", "TEXT");
+      requireColumnType("investigator_timeline_events", "payload", "TEXT");
+      requireColumnType("investigator_timeline_events", "occurred_at", "INTEGER");
+
+      requireIndex(
+        "investigator_dossiers",
+        "idx_investigator_dossiers_tenant_canonical_key_unique",
+        true,
+      );
+      requireIndex(
+        "investigator_dossier_jobs",
+        "idx_investigator_dossier_jobs_tenant_dossier_job_unique",
+        true,
+      );
+
+      migratedDb.close();
+    `;
+
+    execFileSync(
+      process.execPath,
+      ["--import", "tsx", "--input-type=module", "-e", script],
+      {
+        env: {
+          ...process.env,
+          DATA_DIR: tempDir,
+        },
+        stdio: "pipe",
+      },
+    );
+  });
+
   it("backfills legacy PDF rows as generated", async () => {
     tempDir = await mkdtemp(join(tmpdir(), "job-ops-migrate-"));
     const script = `

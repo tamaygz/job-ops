@@ -151,6 +151,10 @@ export interface InvestigatorDossier {
   updatedAt: string;
 }
 
+export interface InvestigatorDossierDetail extends InvestigatorDossier {
+  linkedJobs: InvestigatorLinkedJob[];
+}
+
 /** Minimal job info returned when listing jobs linked to a dossier. */
 export interface InvestigatorLinkedJob {
   jobId: string;

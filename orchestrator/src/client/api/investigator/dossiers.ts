@@ -1,6 +1,7 @@
 import type {
   CreateInvestigatorDossierInput,
   InvestigatorDossier,
+  InvestigatorDossierDetail,
   InvestigatorDossierListFilters,
   InvestigatorDossierListItem,
   InvestigatorLinkedJob,
@@ -27,8 +28,8 @@ export function listDossiers(
   );
 }
 
-export function getDossier(id: string): Promise<InvestigatorDossier> {
-  return fetchApi<InvestigatorDossier>(`/investigator/dossiers/${id}`);
+export function getDossier(id: string): Promise<InvestigatorDossierDetail> {
+  return fetchApi<InvestigatorDossierDetail>(`/investigator/dossiers/${id}`);
 }
 
 export function listLinkedJobs(
