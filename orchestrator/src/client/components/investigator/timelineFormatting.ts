@@ -17,6 +17,8 @@ export const EVENT_LABELS: Record<TimelineEventType, string> = {
   summary_saved: "Summary saved",
   status_changed: "Status changed",
   dossier_merged: "Dossier merged",
+  url_fetched: "URL fetched",
+  search_queried: "Search queried",
 };
 
 function startCase(value: string): string {

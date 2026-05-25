@@ -1182,7 +1182,7 @@ const migrations = [
     tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
     dossier_id TEXT NOT NULL,
     run_id TEXT,
-    event_type TEXT NOT NULL CHECK(event_type IN ('dossier_created','job_linked','run_started','run_completed','run_partial_failed','run_failed','source_saved','source_reviewed','person_saved','salary_saved','summary_saved','status_changed','dossier_merged')),
+    event_type TEXT NOT NULL CHECK(event_type IN ('dossier_created','job_linked','run_started','run_completed','run_partial_failed','run_failed','source_saved','source_reviewed','person_saved','salary_saved','summary_saved','status_changed','dossier_merged','url_fetched','search_queried')),
     payload TEXT NOT NULL,
     occurred_at INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
