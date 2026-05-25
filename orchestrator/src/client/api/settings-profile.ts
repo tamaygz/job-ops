@@ -16,7 +16,26 @@ import type {
   ValidationResult,
 } from "@shared/types";
 import type { CodexAuthStatusResponse } from "./auth";
+import { subscribeToEventSource } from "../lib/sse";
 import { fetchApi, fetchBlobApi, normalizeApiPath } from "./core";
+
+export type SettingsLogEntry = {
+  id: number;
+  ts: string;
+  level: "debug" | "info" | "warn" | "error";
+  line: string;
+  tenantId: string | null;
+};
+
+export type SettingsLogStreamEvent =
+  | {
+      type: "snapshot";
+      entries: SettingsLogEntry[];
+    }
+  | {
+      type: "log";
+      entry: SettingsLogEntry;
+    };
 
 let settingsPromise: Promise<AppSettings> | null = null;
 
@@ -255,4 +274,15 @@ export async function getRxResumeProjects(
     { signal },
   );
   return data.projects;
+}
+
+export function subscribeToSettingsLogStream(handlers: {
+  onOpen?: () => void;
+  onMessage: (payload: SettingsLogStreamEvent) => void;
+  onError?: () => void;
+}): () => void {
+  return subscribeToEventSource<SettingsLogStreamEvent>(
+    normalizeApiPath("/settings/logs/stream"),
+    handlers,
+  );
 }
