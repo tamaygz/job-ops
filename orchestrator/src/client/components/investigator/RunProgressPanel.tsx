@@ -15,18 +15,14 @@ import { useEffect, useState } from "react";
 import { queryKeys } from "@/client/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  activeInvestigatorRunStatuses,
+  investigatorRunKindLabels,
+} from "./runMetadata";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const ACTIVE_RUN_STATUSES = new Set(["queued", "running"]);
-
-const RUN_KIND_LABELS: Record<string, string> = {
-  company_brief: "Company Brief",
-  people_scan: "People Scan",
-  dossier_refresh: "Dossier Refresh",
-};
 
 function formatElapsed(startedAtSeconds: number | null): string {
   if (startedAtSeconds === null) return "";
@@ -63,7 +59,7 @@ const ActiveRunPanel: React.FC<ActiveRunPanelProps> = ({
   const queryClient = useQueryClient();
 
   // Poll every 3 s while active
-  const _isActive = ACTIVE_RUN_STATUSES.has(initialRun.status);
+  const _isActive = activeInvestigatorRunStatuses.has(initialRun.status);
   const { data: run = initialRun } = useRun(dossierId, initialRun.id, {
     enabled: true,
   });
@@ -73,7 +69,7 @@ const ActiveRunPanel: React.FC<ActiveRunPanelProps> = ({
 
   // Use a timer for polling while active
   useEffect(() => {
-    if (!ACTIVE_RUN_STATUSES.has(run.status)) return;
+    if (!activeInvestigatorRunStatuses.has(run.status)) return;
     const interval = setInterval(() => {
       void refetch();
       setElapsed(formatElapsed(run.startedAt));
@@ -95,7 +91,7 @@ const ActiveRunPanel: React.FC<ActiveRunPanelProps> = ({
   // tabs (Timeline, Sources, People, Salary, Summary) show fresh results
   // without requiring a manual page reload.
   useEffect(() => {
-    if (ACTIVE_RUN_STATUSES.has(run.status)) return;
+    if (activeInvestigatorRunStatuses.has(run.status)) return;
     void queryClient.invalidateQueries({
       queryKey: queryKeys.investigator.all,
     });
@@ -110,7 +106,7 @@ const ActiveRunPanel: React.FC<ActiveRunPanelProps> = ({
     }
   };
 
-  const runKindLabel = RUN_KIND_LABELS[run.runKind] ?? run.runKind;
+  const runKindLabel = investigatorRunKindLabels[run.runKind] ?? run.runKind;
 
   // ---- queued / running ----
   if (run.status === "queued" || run.status === "running") {
