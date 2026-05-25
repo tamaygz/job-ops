@@ -139,13 +139,49 @@ describe("runService", () => {
       );
       expect(mocks.enqueue).toHaveBeenCalledWith(
         "investigator_research_run",
-        expect.objectContaining({ dossierId: DOSSIER_ID, runId: RUN_ID }),
-        expect.any(Object),
+        expect.objectContaining({
+          tenantId: "tenant-test",
+          dossierId: DOSSIER_ID,
+          runId: RUN_ID,
+          runKind: "company_brief",
+        }),
+        {
+          dedupeKey: "tenant-test:dossier-unit-001:company_brief",
+        },
       );
       expect(mocks.insertEvent).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: "run_started", runId: RUN_ID }),
       );
       expect(mocks.scheduleResearchRunWorker).toHaveBeenCalledOnce();
+    });
+
+    it("cancels a newly created run and throws CONFLICT when enqueue is deduplicated", async () => {
+      const mockRun = makeRun();
+      mocks.findDossierById.mockResolvedValue({ id: DOSSIER_ID });
+      mocks.findActiveForDossierAndKind.mockResolvedValue(null);
+      mocks.create.mockResolvedValue(mockRun);
+      mocks.enqueue.mockResolvedValue({
+        id: "existing-queued-job",
+        queue: "investigator_research_run",
+        acceptedAt: new Date().toISOString(),
+        deduplicated: true,
+      });
+      mocks.updateStatus.mockResolvedValue(makeRun({ status: "cancelled" }));
+
+      await expect(
+        startRun(DOSSIER_ID, { runKind: "company_brief" }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+
+      expect(mocks.updateStatus).toHaveBeenCalledWith(
+        RUN_ID,
+        "cancelled",
+        expect.objectContaining({
+          errorCode: "deduplicated",
+          errorMessage: "Deduplicated by queued run existing-queued-job",
+        }),
+      );
+      expect(mocks.insertEvent).not.toHaveBeenCalled();
+      expect(mocks.scheduleResearchRunWorker).not.toHaveBeenCalled();
     });
   });
 
