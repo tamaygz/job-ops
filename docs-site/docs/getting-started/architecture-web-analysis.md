@@ -129,7 +129,6 @@ runWithRequestContext({ tenantId: payload.tenantId, pipelineRunId: payload.runId
   // investigator run processing
 });
 ```
-</pr_description>
 git rev-parse HEAD
   dd140e36d059699e53b97a080b55a04deb8d2e70
   
