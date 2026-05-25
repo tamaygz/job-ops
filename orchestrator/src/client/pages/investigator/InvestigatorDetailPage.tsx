@@ -3,22 +3,19 @@ import { RunProgressPanel } from "@client/components/investigator/RunProgressPan
 import { SalaryPanel } from "@client/components/investigator/SalaryPanel";
 import { SourceReviewPanel } from "@client/components/investigator/SourceReviewPanel";
 import { SummaryPanel } from "@client/components/investigator/SummaryPanel";
-import { PageHeader, PageMain } from "@client/components/layout";
+import { TimelinePanel } from "@client/components/investigator/TimelinePanel";
 import {
-  useCancelRun,
-  useStartRun,
-  useUpdateDossier,
-} from "@client/hooks/queries/useInvestigatorMutations";
+  activeInvestigatorRunStatuses,
+} from "@client/components/investigator/runMetadata";
+import { dossierStatusConfig } from "@client/components/investigator/statusConfig";
+import { PageHeader, PageMain } from "@client/components/layout";
 import {
   useDossier,
   useRuns,
 } from "@client/hooks/queries/useInvestigatorQueries";
 import { showErrorToast } from "@client/lib/error-toast";
 import type {
-  DossierStatus,
   InvestigatorResearchRun,
-  StartInvestigatorRunInput,
-  UpdateInvestigatorDossierInput,
 } from "@shared/types";
 import {
   ArrowLeft,
@@ -27,20 +24,11 @@ import {
   ExternalLink,
   Loader2,
   Play,
-  XCircle,
 } from "lucide-react";
-import type React from "react";
 import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,308 +36,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { dossierStatusConfig } from "./InvestigatorListPage";
+import { EditDossierDialog } from "./detail/EditDossierDialog";
+import { RunHistorySection } from "./detail/RunHistorySection";
+import { StartRunDialog } from "./detail/StartRunDialog";
 
 // ---------------------------------------------------------------------------
 // Run status helpers
 // ---------------------------------------------------------------------------
-
-const RUN_KIND_LABELS: Record<string, string> = {
-  company_brief: "Company Brief",
-  people_scan: "People Scan",
-  dossier_refresh: "Dossier Refresh",
-};
-
-const activeRunStatuses = new Set(["queued", "running"]);
-
-// ---------------------------------------------------------------------------
-// Start research dialog
-// ---------------------------------------------------------------------------
-
-interface StartRunDialogProps {
-  dossierId: string;
-  open: boolean;
-  onClose: () => void;
-}
-
-const StartRunDialog: React.FC<StartRunDialogProps> = ({
-  dossierId,
-  open,
-  onClose,
-}) => {
-  const [runKind, setRunKind] = useState<string>("company_brief");
-  const mutation = useStartRun();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const input: StartInvestigatorRunInput = {
-      runKind: runKind as StartInvestigatorRunInput["runKind"],
-    };
-    try {
-      await mutation.mutateAsync({ dossierId, input });
-      onClose();
-    } catch (err) {
-      showErrorToast(err, "Failed to start research run");
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Start Research</DialogTitle>
-        </DialogHeader>
-        <form id="start-run-form" onSubmit={handleSubmit}>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="run-kind">Research type</Label>
-              <Select value={runKind} onValueChange={setRunKind}>
-                <SelectTrigger id="run-kind">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(RUN_KIND_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </form>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form="start-run-form"
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Play className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Start
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Edit dossier dialog
-// ---------------------------------------------------------------------------
-
-interface EditDossierDialogProps {
-  dossierId: string;
-  currentName: string;
-  currentUrl: string | null;
-  currentStatus: DossierStatus;
-  currentTags: string[];
-  open: boolean;
-  onClose: () => void;
-}
-
-const EditDossierDialog: React.FC<EditDossierDialogProps> = ({
-  dossierId,
-  currentName,
-  currentUrl,
-  currentStatus,
-  currentTags,
-  open,
-  onClose,
-}) => {
-  const [companyName, setCompanyName] = useState(currentName);
-  const [companyUrl, setCompanyUrl] = useState(currentUrl ?? "");
-  const [status, setStatus] = useState<DossierStatus>(currentStatus);
-  const [tagsInput, setTagsInput] = useState(currentTags.join(", "));
-  const mutation = useUpdateDossier();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const tags = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-    const input: UpdateInvestigatorDossierInput = {
-      companyName: companyName.trim() || undefined,
-      companyUrl: companyUrl.trim() || null,
-      status,
-      tags,
-    };
-    try {
-      await mutation.mutateAsync({ id: dossierId, input });
-      onClose();
-    } catch (err) {
-      showErrorToast(err, "Failed to update dossier");
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit Dossier</DialogTitle>
-        </DialogHeader>
-        <form id="edit-dossier-form" onSubmit={handleSubmit}>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-company-name">Company name</Label>
-              <input
-                id="edit-company-name"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-company-url">Website</Label>
-              <input
-                id="edit-company-url"
-                type="url"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="https://"
-                value={companyUrl}
-                onChange={(e) => setCompanyUrl(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-status">Status</Label>
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as DossierStatus)}
-              >
-                <SelectTrigger id="edit-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(dossierStatusConfig) as DossierStatus[]).map(
-                    (s) => (
-                      <SelectItem key={s} value={s}>
-                        {dossierStatusConfig[s].label}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-tags">Tags (comma-separated)</Label>
-              <input
-                id="edit-tags"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="fintech, startup, remote"
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-              />
-            </div>
-          </div>
-        </form>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form="edit-dossier-form"
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending ? "Saving…" : "Save"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Run history row
-// ---------------------------------------------------------------------------
-
-const RunRow: React.FC<{
-  run: InvestigatorResearchRun;
-  dossierId: string;
-}> = ({ run, dossierId }) => {
-  const cancelMutation = useCancelRun();
-  const isActive = activeRunStatuses.has(run.status);
-
-  const statusColor =
-    {
-      queued: "text-blue-400",
-      running: "text-amber-400",
-      completed: "text-emerald-400",
-      partial_failed: "text-orange-400",
-      failed: "text-rose-400",
-      cancelled: "text-zinc-400",
-    }[run.status] ?? "text-muted-foreground";
-
-  const handleCancel = async () => {
-    try {
-      await cancelMutation.mutateAsync({ dossierId, runId: run.id });
-    } catch (err) {
-      showErrorToast(err, "Failed to cancel run");
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium">
-          {RUN_KIND_LABELS[run.runKind] ?? run.runKind}
-        </span>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className={cn("text-xs font-medium capitalize", statusColor)}>
-            {run.status.replace(/_/g, " ")}
-          </span>
-          {run.errorMessage && (
-            <span className="text-xs text-rose-400 truncate">
-              — {run.errorMessage}
-            </span>
-          )}
-        </div>
-      </div>
-      {isActive && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1 text-xs"
-          onClick={handleCancel}
-          disabled={cancelMutation.isPending}
-        >
-          <XCircle className="h-3.5 w-3.5" />
-          Cancel
-        </Button>
-      )}
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Tab stubs
-// ---------------------------------------------------------------------------
-
-const TabStub: React.FC<{ message?: string }> = ({
-  message = "Coming soon in a future release.",
-}) => (
-  <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-    {message}
-  </div>
-);
 
 // ---------------------------------------------------------------------------
 // Detail page
@@ -396,7 +91,7 @@ export const InvestigatorDetailPage: React.FC = () => {
     ? (dossierStatusConfig[dossier.status] ?? dossierStatusConfig.active)
     : null;
 
-  const activeRun = runs?.find((r) => activeRunStatuses.has(r.status));
+  const activeRun = runs?.find((r) => activeInvestigatorRunStatuses.has(r.status));
 
   const handleArchive = async () => {
     if (!dossier) return;
@@ -535,30 +230,15 @@ export const InvestigatorDetailPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
-            <TabStub message="Research timeline events will appear here." />
+            <TimelinePanel dossierId={dossierId} />
           </TabsContent>
         </Tabs>
 
-        {/* Run history */}
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Research runs
-          </h2>
-          {runsLoading ? (
-            <div className="animate-pulse space-y-2">
-              <div className="h-12 rounded-lg bg-muted/40" />
-              <div className="h-12 rounded-lg bg-muted/40" />
-            </div>
-          ) : runs && runs.length > 0 ? (
-            runs.map((run) => (
-              <RunRow key={run.id} run={run} dossierId={dossierId} />
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No research runs yet. Click "Start Research" to begin.
-            </p>
-          )}
-        </div>
+        <RunHistorySection
+          dossierId={dossierId}
+          runs={runs}
+          runsLoading={runsLoading}
+        />
       </PageMain>
 
       {dossierId && (
