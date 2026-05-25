@@ -4,9 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TYPST_THEME_VALUES, type TypstTheme } from "@shared/types";
 import { afterEach, describe, expect, it } from "vitest";
-import type { LatexResumeDocument } from "./types";
+import type { ResumeRenderDocument } from "./types";
 import {
   buildTypstDocument,
+  convertDocFieldsToTypst,
   getTypstBinary,
   getTypstTemplatePath,
   normalizeTypstDocumentPicturePath,
@@ -19,7 +20,7 @@ import {
 
 const nativeThemes = new Set(["classic", "compact"]);
 
-const baseDocument: LatexResumeDocument = {
+const baseDocument: ResumeRenderDocument = {
   name: "Jane Doe",
   headline: "Senior Software Engineer",
   location: "London, UK",
@@ -78,6 +79,10 @@ async function readNativeThemeTokens(
   return loadedTheme.tokens;
 }
 
+function toPosixPath(value: string): string {
+  return value.replaceAll("\\", "/");
+}
+
 describe("typst resume renderer", () => {
   const tempDirs: string[] = [];
 
@@ -90,7 +95,9 @@ describe("typst resume renderer", () => {
   });
 
   it("exposes the bundled Typst template", async () => {
-    expect(getTypstTemplatePath()).toContain("typst-themes/classic/main.typ");
+    expect(toPosixPath(getTypstTemplatePath())).toContain(
+      "typst-themes/classic/main.typ",
+    );
     const template = await readTypstTemplate();
     expect(template).toContain("#set page");
     expect(template).toContain("__BODY__");
@@ -107,7 +114,7 @@ describe("typst resume renderer", () => {
       } else {
         expect(manifest.tokens).toBeUndefined();
       }
-      expect(getTypstTemplatePath(theme)).toContain(
+      expect(toPosixPath(getTypstTemplatePath(theme))).toContain(
         `typst-themes/${theme}/main.typ`,
       );
     }
@@ -148,6 +155,22 @@ describe("typst resume renderer", () => {
     const typst = buildTypstDocument(
       {
         ...baseDocument,
+        education: [
+          {
+            title: "University",
+            subtitle: "MSc",
+            date: "2020",
+            bullets: ["Studied distributed systems"],
+          },
+        ],
+        projects: [
+          {
+            title: "Platform",
+            subtitle: "TypeScript",
+            date: "2024",
+            bullets: ["Built deployment tooling"],
+          },
+        ],
         sectionTitles: {
           profiles: "Perfiles",
           summary: "Resumen",
@@ -174,6 +197,41 @@ describe("typst resume renderer", () => {
     expect(typst).toContain("= Resumen");
     expect(typst).toContain("= Experiencia");
     expect(typst).toContain("= Habilidades técnicas");
+  });
+
+  it("respects custom core section ordering", async () => {
+    const tokens = await readNativeThemeTokens("classic");
+    const typst = buildTypstDocument(
+      {
+        ...baseDocument,
+        education: [
+          {
+            title: "University",
+            subtitle: "MSc",
+            date: "2020",
+            bullets: ["Studied distributed systems"],
+          },
+        ],
+        projects: [
+          {
+            title: "Platform",
+            subtitle: "TypeScript",
+            date: "2024",
+            bullets: ["Built deployment tooling"],
+          },
+        ],
+        sectionOrder: ["skills", "projects", "experience", "education"],
+      },
+      "__BODY__",
+      tokens,
+    );
+
+    expect(typst.indexOf("= Technical Skills")).toBeLessThan(
+      typst.indexOf("= Projects"),
+    );
+    expect(typst.indexOf("= Projects")).toBeLessThan(
+      typst.indexOf("= Experience"),
+    );
   });
 
   it("exposes a stable resume data path for package-backed themes", async () => {
@@ -466,6 +524,63 @@ describe("typst resume renderer", () => {
       compileCwd,
     );
     expect(normalizedDocument.picture?.renderPath).toBe(outsidePath);
+  });
+
+  it("compiles HTML formatting tags into Typst macros and escapes special characters", async () => {
+    const tokens = await readNativeThemeTokens("classic");
+    const typst = buildTypstDocument(
+      {
+        ...baseDocument,
+        summary:
+          "<strong>Bold summary</strong> & <em>Italic summary</em> with # and * sign.",
+        experience: [
+          {
+            title: "Acme",
+            subtitle: "<b>Senior</b> Platform Engineer",
+            date: "2023",
+            bullets: [
+              "Managed <i>critical</i> systems.",
+              "Handled $50k budgets.",
+            ],
+          },
+        ],
+      },
+      "__BODY__",
+      tokens,
+    );
+
+    expect(typst).toContain(
+      "#strong[Bold summary] & #emph[Italic summary] with \\# and \\* sign.",
+    );
+    expect(typst).toContain("#strong[Senior] Platform Engineer");
+    expect(typst).toContain("Managed #emph[critical] systems.");
+    expect(typst).toContain("Handled \\$50k budgets.");
+  });
+
+  it("converts HTML formatting tags to Typst markup formatting in convertDocFieldsToTypst", () => {
+    const converted = convertDocFieldsToTypst({
+      ...baseDocument,
+      summary: "<strong>Bold</strong> and <em>Italic</em> and normal.",
+      experience: [
+        {
+          title: "Acme",
+          subtitle: "Platform Engineer",
+          date: "2023",
+          bullets: [
+            "Managed <i>critical</i> systems.",
+            "Handled $50k budgets.",
+          ],
+        },
+      ],
+    });
+
+    expect(converted.summary).toBe(
+      "#strong[Bold] and #emph[Italic] and normal.",
+    );
+    expect(converted.experience[0]?.bullets).toEqual([
+      "Managed #emph[critical] systems.",
+      "Handled \\$50k budgets.",
+    ]);
   });
 
   it("fails with a helpful error when typst is unavailable", async () => {

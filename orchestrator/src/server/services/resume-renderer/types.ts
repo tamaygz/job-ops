@@ -95,6 +95,20 @@ export type LatexResumeStyleOverrides = {
   typography?: Partial<LatexResumeStyle["typography"]>;
 };
 
+export type LatexResumeOrderedSectionKey =
+  | "profiles"
+  | "experience"
+  | "education"
+  | "projects"
+  | "skills"
+  | "languages"
+  | "interests"
+  | "awards"
+  | "certifications"
+  | "publications"
+  | "volunteer"
+  | "references";
+
 export interface LatexResumeDocument {
   name: string;
   headline?: string | null;
@@ -115,6 +129,7 @@ export interface LatexResumeDocument {
   publications: LatexResumeEntry[];
   volunteer: LatexResumeEntry[];
   references: LatexResumeEntry[];
+  sectionOrder?: LatexResumeOrderedSectionKey[];
   sectionTitles?: LatexResumeSectionTitles;
   style?: LatexResumeStyle;
 }
@@ -134,3 +149,11 @@ export interface ResumeRenderer {
 export interface NormalizeResumeJsonToLatexDocumentOptions {
   language?: ChatStyleManualLanguage;
 }
+
+export type ResumeRenderContactItem = LatexResumeContactItem;
+export type ResumeRenderEntry = LatexResumeEntry;
+export type ResumeRenderSkillGroup = LatexResumeSkillGroup;
+export type ResumeRenderSectionTitles = LatexResumeSectionTitles;
+export type ResumeRenderDocument = LatexResumeDocument;
+export type NormalizeResumeJsonOptions =
+  NormalizeResumeJsonToLatexDocumentOptions;

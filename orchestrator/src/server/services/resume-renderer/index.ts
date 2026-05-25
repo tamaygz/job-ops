@@ -1,5 +1,5 @@
 import type { PdfRenderer, TypstTheme } from "@shared/types";
-import { normalizeResumeJsonToLatexDocument } from "./document";
+import { buildResumeRenderDocument } from "./document";
 import { renderLatexPdf } from "./latex";
 import type {
   LatexResumeStyleOverrides,
@@ -7,7 +7,7 @@ import type {
 } from "./types";
 import { renderTypstPdf } from "./typst";
 
-export { normalizeResumeJsonToLatexDocument } from "./document";
+export { buildResumeRenderDocument } from "./document";
 export {
   getLatexTemplatePath,
   getTectonicBinary,
@@ -31,7 +31,7 @@ export async function renderResumePdf(args: {
   typstTheme?: TypstTheme;
   typstStyleOverrides?: LatexResumeStyleOverrides;
 }): Promise<void> {
-  const document = normalizeResumeJsonToLatexDocument(args.resumeJson, {
+  const document = buildResumeRenderDocument(args.resumeJson, {
     language: args.language,
   });
   if (args.renderer === "typst") {

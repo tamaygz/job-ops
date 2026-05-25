@@ -335,4 +335,65 @@ describe("normalizeResumeJsonToLatexDocument", () => {
       backgroundHex: "#ffffff",
     });
   });
+
+  it("preserves configured core section ordering", () => {
+    const document = normalizeResumeJsonToLatexDocument({
+      basics: { name: "Jane Doe" },
+      metadata: {
+        layout: {
+          pages: [
+            {
+              main: ["skills", "projects", "experience", "projects"],
+            },
+          ],
+        },
+      },
+    });
+
+    expect(document.sectionOrder).toEqual([
+      "skills",
+      "projects",
+      "experience",
+      "profiles",
+      "education",
+      "languages",
+      "interests",
+      "awards",
+      "certifications",
+      "publications",
+      "volunteer",
+      "references",
+    ]);
+  });
+
+  it("preserves basic formatting tags and strips other HTML tags", () => {
+    const document = normalizeResumeJsonToLatexDocument({
+      basics: { name: "Jane Doe" },
+      summary: {
+        hidden: false,
+        content:
+          '<p><strong>Bold statement</strong> and <em>italic explanation</em>. Also <span class="ignore">ignored tag</span>.</p>',
+      },
+      sections: {
+        experience: {
+          hidden: false,
+          items: [
+            {
+              id: "exp-1",
+              company: "Acme",
+              description:
+                '<ul><li>Worked with <b>bold text</b> and <i>italic text</i>. <div style="color: red;">Strip this div</div></li></ul>',
+            },
+          ],
+        },
+      },
+    });
+
+    expect(document.summary).toBe(
+      "<strong>Bold statement</strong> and <em>italic explanation</em>. Also ignored tag .",
+    );
+    expect(document.experience[0]?.bullets).toEqual([
+      "Worked with <b>bold text</b> and <i>italic text</i>. Strip this div",
+    ]);
+  });
 });
