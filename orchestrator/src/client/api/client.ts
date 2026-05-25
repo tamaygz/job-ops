@@ -1,6 +1,7 @@
 export * from "./admin";
 export * from "./auth";
 export * from "./auth-session";
+export * from "./compare";
 export * from "./ghostwriter";
 export * from "./investigator";
 export * from "./jobs";

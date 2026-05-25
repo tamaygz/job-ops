@@ -174,6 +174,12 @@ export const createAppSettings = (
       default: "classic",
       override: null,
     },
+    typstBodyFont: { value: "", default: "", override: null },
+    typstHeadingFont: { value: "", default: "", override: null },
+    typstPrimaryColor: { value: "", default: "", override: null },
+    typstTextColor: { value: "", default: "", override: null },
+    typstBackgroundColor: { value: "", default: "", override: null },
+    typstSecondaryBackgroundColor: { value: "", default: "", override: null },
     rxresumeBaseResumeId: null,
     ukvisajobsMaxJobs: { value: 50, default: 50, override: null },
     adzunaMaxJobsPerTerm: { value: 50, default: 50, override: null },
@@ -371,5 +377,5 @@ export const createAppSettings = (
     autoSkipScoreThreshold: { value: null, default: null, override: null },
   };
 
-  return { ...base, ...overrides };
+  return { ...base, ...overrides } as AppSettings;
 };
