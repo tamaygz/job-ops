@@ -36,6 +36,13 @@ export const LLM_PROVIDER_VALUES = [
 ] as const;
 export type LlmProviderId = (typeof LLM_PROVIDER_VALUES)[number];
 
+export const WEB_SEARCH_PROVIDER_VALUES = [
+  "bing",
+  "searxng",
+  "brave",
+] as const;
+export type WebSearchProviderId = (typeof WEB_SEARCH_PROVIDER_VALUES)[number];
+
 export const LLM_PURPOSE_VALUES = [
   "scoring",
   "tailoring",
@@ -235,6 +242,11 @@ export interface AppSettings {
   investigatorBingSearchResultLimit: Resolved<number>;
   investigatorSummarySourceLimit: Resolved<number>;
   investigatorSummaryExcerptMaxChars: Resolved<number>;
+  webSearchProviders: Resolved<WebSearchProviderId[]>;
+  webSearchResultLimit: Resolved<number>;
+  webSearchMarket: Resolved<string>;
+  webSearchBingEndpoint: Resolved<string>;
+  webSearchSearxngBaseUrl: Resolved<string>;
   searchCities: Resolved<string>;
   locationSearchScope: Resolved<LocationSearchScope>;
   locationMatchStrictness: Resolved<LocationMatchStrictness>;
@@ -276,6 +288,9 @@ export interface AppSettings {
   adzunaAppKeyHint: string | null;
   apifyTokenHint: string | null;
   webhookSecretHint: string | null;
+  webSearchBingApiKeyHint: string | null;
+  webSearchSearxngApiKeyHint: string | null;
+  webSearchBraveApiKeyHint: string | null;
 
   // Computed:
   profileProjects: ResumeProjectCatalogItem[];

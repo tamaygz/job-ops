@@ -1,5 +1,6 @@
 import * as sourceService from "@server/services/investigator/sourceService";
 import type { InvestigatorProvider } from "../types";
+import { buildCompanySiteCandidateUrls } from "@server/services/investigator/urlUtils";
 import {
   fetchPageText,
   isBlockedHost,
@@ -20,18 +21,6 @@ const PATHS = [
   "/contact",
 ] as const;
 
-function buildCandidateUrls(baseUrl: string): string[] {
-  const base = new URL(baseUrl);
-  const urls = new Set<string>();
-
-  for (const path of PATHS) {
-    const next = new URL(path, base).toString();
-    urls.add(next);
-  }
-
-  return Array.from(urls);
-}
-
 export const companySiteProvider: InvestigatorProvider = {
   id: "company_site",
   displayName: "Company site",
@@ -46,12 +35,14 @@ export const companySiteProvider: InvestigatorProvider = {
       return { status: "skipped", message: "Company URL blocked" };
     }
 
-    let candidates: string[];
-    try {
-      candidates = buildCandidateUrls(companyUrl);
-    } catch {
-      return { status: "skipped", message: "Company URL is not a valid absolute URL" };
+    const candidates = buildCompanySiteCandidateUrls(companyUrl, PATHS);
+    if (candidates.length === 0) {
+      return {
+        status: "skipped",
+        message: "Company URL is not a valid HTTP(S) URL",
+      };
     }
+
     let created = 0;
 
     for (const url of candidates) {

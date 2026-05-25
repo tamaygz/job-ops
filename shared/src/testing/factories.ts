@@ -234,6 +234,31 @@ export const createAppSettings = (
     default: 500,
     override: null,
   },
+  webSearchProviders: {
+    value: ["bing"],
+    default: ["bing"],
+    override: null,
+  },
+  webSearchResultLimit: {
+    value: 8,
+    default: 8,
+    override: null,
+  },
+  webSearchMarket: {
+    value: "en-US",
+    default: "en-US",
+    override: null,
+  },
+  webSearchBingEndpoint: {
+    value: "https://api.bing.microsoft.com/v7.0/search",
+    default: "https://api.bing.microsoft.com/v7.0/search",
+    override: null,
+  },
+  webSearchSearxngBaseUrl: {
+    value: "",
+    default: "",
+    override: null,
+  },
   searchCities: {
     value: "",
     default: "",
@@ -291,6 +316,9 @@ export const createAppSettings = (
   adzunaAppKeyHint: null,
   apifyTokenHint: null,
   webhookSecretHint: null,
+  webSearchBingApiKeyHint: null,
+  webSearchSearxngApiKeyHint: null,
+  webSearchBraveApiKeyHint: null,
   backupEnabled: { value: false, default: false, override: null },
   backupHour: { value: 3, default: 3, override: null },
   backupMaxCount: { value: 7, default: 7, override: null },

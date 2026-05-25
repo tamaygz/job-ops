@@ -1,4 +1,5 @@
 import * as sourceService from "@server/services/investigator/sourceService";
+import { extractNormalizedHostname } from "@server/services/investigator/urlUtils";
 import type { InvestigatorProvider } from "../types";
 import { truncateText } from "../utils/text";
 
@@ -32,13 +33,9 @@ function inferSourceType(url: string | null):
 }
 
 function buildQuery(companyName: string, companyUrl: string | null): string {
-  if (!companyUrl) return companyName;
-  try {
-    const hostname = new URL(companyUrl).hostname.replace(/^www\./, "");
-    return `${companyName} site:${hostname}`.trim();
-  } catch {
-    return companyName;
-  }
+  const hostname = extractNormalizedHostname(companyUrl);
+  if (!hostname) return companyName;
+  return `${companyName} site:${hostname}`.trim();
 }
 
 export const bingSearchProvider: InvestigatorProvider = {
