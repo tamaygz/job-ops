@@ -10,6 +10,7 @@ export * from "./types/chat";
 export * from "./types/design-resume";
 export * from "./types/design-resume-jake";
 export * from "./types/extractors";
+export * from "./types/investigator";
 export * from "./types/jobs";
 export * from "./types/location";
 export * from "./types/pipeline";

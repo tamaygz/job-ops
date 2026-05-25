@@ -76,6 +76,13 @@ export const DEFAULT_GEMINI_MODEL = "google/gemini-3-flash-preview";
 export const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
 export const DEFAULT_GLM_MODEL = "glm-5.1";
 export const DEFAULT_CODEX_MODEL = "";
+export const DEFAULT_INVESTIGATOR_SUMMARY_SOURCE_LIMIT = 10;
+export const DEFAULT_INVESTIGATOR_SUMMARY_EXCERPT_MAX_CHARS = 500;
+export const DEFAULT_INVESTIGATOR_SUMMARY_SYSTEM_PROMPT =
+  "You are an expert business intelligence analyst. Return a JSON object with exactly " +
+  'three keys: "summary" (detailed markdown analysis), "facts" (string array of ' +
+  'verifiable claims extracted from the sources), "hypotheses" (string array of ' +
+  "plausible inferences not directly stated in the sources).";
 
 export function getDefaultModelForProvider(
   provider: string | null | undefined,
@@ -565,6 +572,36 @@ export const settingsRegistry = {
     parse: parseNonEmptyStringOrNull,
     serialize: (value: string | null | undefined): string | null =>
       value ?? null,
+  },
+  investigatorSummarySystemPromptTemplate: {
+    kind: "typed" as const,
+    schema: z.string().trim().max(12000),
+    default: (): string => DEFAULT_INVESTIGATOR_SUMMARY_SYSTEM_PROMPT,
+    parse: parseNonEmptyStringOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
+  investigatorSummarySourceLimit: {
+    kind: "typed" as const,
+    schema: z.number().int().min(1).max(25),
+    default: (): number => DEFAULT_INVESTIGATOR_SUMMARY_SOURCE_LIMIT,
+    parse: (raw: string | undefined): number | null => {
+      const parsed = raw ? parseInt(raw, 10) : NaN;
+      if (Number.isNaN(parsed)) return null;
+      return Math.min(25, Math.max(1, parsed));
+    },
+    serialize: serializeNullableNumber,
+  },
+  investigatorSummaryExcerptMaxChars: {
+    kind: "typed" as const,
+    schema: z.number().int().min(100).max(2000),
+    default: (): number => DEFAULT_INVESTIGATOR_SUMMARY_EXCERPT_MAX_CHARS,
+    parse: (raw: string | undefined): number | null => {
+      const parsed = raw ? parseInt(raw, 10) : NaN;
+      if (Number.isNaN(parsed)) return null;
+      return Math.min(2000, Math.max(100, parsed));
+    },
+    serialize: serializeNullableNumber,
   },
   searchCities: {
     kind: "typed" as const,

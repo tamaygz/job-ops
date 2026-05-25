@@ -57,6 +57,10 @@ vi.mock("@/components/ui/dropdown-menu", () => {
   };
 });
 
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => vi.fn(),
+}));
+
 vi.mock("@client/components", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@client/components")>();
   return {
