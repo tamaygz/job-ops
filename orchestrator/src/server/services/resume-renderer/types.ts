@@ -77,6 +77,20 @@ export interface LatexResumeSectionTitles {
   references: string;
 }
 
+export type LatexResumeOrderedSectionKey =
+  | "profiles"
+  | "experience"
+  | "education"
+  | "projects"
+  | "skills"
+  | "languages"
+  | "interests"
+  | "awards"
+  | "certifications"
+  | "publications"
+  | "volunteer"
+  | "references";
+
 export interface LatexResumeStyle {
   colors: {
     primaryHex: string;
@@ -94,20 +108,6 @@ export type LatexResumeStyleOverrides = {
   colors?: Partial<LatexResumeStyle["colors"]>;
   typography?: Partial<LatexResumeStyle["typography"]>;
 };
-
-export type LatexResumeOrderedSectionKey =
-  | "profiles"
-  | "experience"
-  | "education"
-  | "projects"
-  | "skills"
-  | "languages"
-  | "interests"
-  | "awards"
-  | "certifications"
-  | "publications"
-  | "volunteer"
-  | "references";
 
 export interface LatexResumeDocument {
   name: string;

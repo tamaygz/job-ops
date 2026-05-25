@@ -208,18 +208,16 @@ function escapeTypstText(value: string): string {
         result.push("#strong[");
         tagStack.push("bold");
       } else if (lower.startsWith("</strong") || lower.startsWith("</b>")) {
-        if (tagStack.pop() === "bold") {
-          result.push("]");
-        } else {
+        if (tagStack.length > 0 && tagStack[tagStack.length - 1] === "bold") {
+          tagStack.pop();
           result.push("]");
         }
       } else if (lower.startsWith("<em") || lower.startsWith("<i")) {
         result.push("#emph[");
         tagStack.push("italic");
       } else if (lower.startsWith("</em") || lower.startsWith("</i>")) {
-        if (tagStack.pop() === "italic") {
-          result.push("]");
-        } else {
+        if (tagStack.length > 0 && tagStack[tagStack.length - 1] === "italic") {
+          tagStack.pop();
           result.push("]");
         }
       }
@@ -597,10 +595,6 @@ function replaceStylePlaceholders(
     .replaceAll(
       "__SECONDARY_BACKGROUND_COLOR__",
       `rgb(${JSON.stringify(secondaryBackgroundHex)})`,
-    )
-    .replaceAll(
-      "__SIDEBAR_BG_COLOR__",
-      `rgb(${JSON.stringify(secondaryBackgroundHex)})`,
     );
 }
 
@@ -823,7 +817,6 @@ export const typstResumeRenderer: ResumeRenderer = {
       );
       let typst: string;
       let resumeDataDoc: LatexResumeDocument;
-
       if (manifest.kind === "native") {
         if (!tokens) {
           throw new Error(

@@ -3,7 +3,7 @@ import { buildResumeRenderDocument } from "./document";
 import { renderLatexPdf } from "./latex";
 import type {
   LatexResumeStyleOverrides,
-  NormalizeResumeJsonToLatexDocumentOptions,
+  NormalizeResumeJsonOptions,
 } from "./types";
 import { renderTypstPdf } from "./typst";
 
@@ -26,7 +26,7 @@ export async function renderResumePdf(args: {
   resumeJson: Record<string, unknown>;
   outputPath: string;
   jobId: string;
-  language?: NormalizeResumeJsonToLatexDocumentOptions["language"];
+  language?: NormalizeResumeJsonOptions["language"];
   renderer?: LocalPdfRenderer;
   typstTheme?: TypstTheme;
   typstStyleOverrides?: LatexResumeStyleOverrides;

@@ -166,6 +166,7 @@ function stripHtml(value: string): string {
       .replace(/<\/p>\s*<p[^>]*>/gi, "\n")
       .replace(/<\/li>\s*<li[^>]*>/gi, "\n")
       .replace(
+        // Strip all tags except inline formatting: <strong>, <b>, <em>, <i> and their closing variants
         /<(?!strong\b|b\b|em\b|i\b|\/strong\b|\/b\b|\/em\b|\/i\b)\/?[a-zA-Z0-9]+(?:\s+[^>]*)?>/gi,
         " ",
       ),
@@ -230,6 +231,37 @@ function getCustomFieldsTitle(
   return toText(basics.customFieldsTitle).trim() || titles.customFields;
 }
 
+function getOrderedSectionKeys(
+  resumeJson: RecordLike,
+): LatexResumeOrderedSectionKey[] {
+  const metadata = asRecord(resumeJson.metadata);
+  const layout = asRecord(metadata?.layout);
+  const pages = asArray(layout?.pages);
+  const firstPage = asRecord(pages[0]);
+  const mainSections = asArray(firstPage?.main);
+
+  const order: LatexResumeOrderedSectionKey[] = [];
+  const allowed = new Set<LatexResumeOrderedSectionKey>(ORDERABLE_SECTION_KEYS);
+
+  for (const key of mainSections) {
+    if (
+      typeof key === "string" &&
+      allowed.has(key as LatexResumeOrderedSectionKey) &&
+      !order.includes(key as LatexResumeOrderedSectionKey)
+    ) {
+      order.push(key as LatexResumeOrderedSectionKey);
+    }
+  }
+
+  for (const key of ORDERABLE_SECTION_KEYS) {
+    if (!order.includes(key)) {
+      order.push(key);
+    }
+  }
+
+  return order;
+}
+
 function componentToHex(value: number): string {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
@@ -287,37 +319,6 @@ function buildStyle(resumeJson: RecordLike) {
         headingFontFamily || bodyFontFamily || "IBM Plex Serif",
     },
   };
-}
-
-function getOrderedSectionKeys(
-  resumeJson: RecordLike,
-): LatexResumeOrderedSectionKey[] {
-  const metadata = asRecord(resumeJson.metadata);
-  const layout = asRecord(metadata?.layout);
-  const pages = asArray(layout?.pages);
-  const firstPage = asRecord(pages[0]);
-  const mainSections = asArray(firstPage?.main);
-
-  const order: LatexResumeOrderedSectionKey[] = [];
-  const allowed = new Set<LatexResumeOrderedSectionKey>(ORDERABLE_SECTION_KEYS);
-
-  for (const key of mainSections) {
-    if (
-      typeof key === "string" &&
-      allowed.has(key as LatexResumeOrderedSectionKey) &&
-      !order.includes(key as LatexResumeOrderedSectionKey)
-    ) {
-      order.push(key as LatexResumeOrderedSectionKey);
-    }
-  }
-
-  for (const key of ORDERABLE_SECTION_KEYS) {
-    if (!order.includes(key)) {
-      order.push(key);
-    }
-  }
-
-  return order;
 }
 
 function buildPicture(resumeJson: RecordLike): LatexResumePicture | null {
