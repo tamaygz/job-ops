@@ -33,19 +33,22 @@ interface StartRunDialogProps {
   onClose: () => void;
 }
 
-const RUN_KIND_TO_TEMPLATE_SCOPE: Record<string, "company" | "people" | null> =
-  {
-    company_brief: "company",
-    people_scan: "people",
-    dossier_refresh: null,
-  };
+const RUN_KIND_TO_TEMPLATE_SCOPE: Record<
+  StartInvestigatorRunInput["runKind"],
+  "company" | "people" | null
+> = {
+  company_brief: "company",
+  people_scan: "people",
+  dossier_refresh: null,
+};
 
 export const StartRunDialog: React.FC<StartRunDialogProps> = ({
   dossierId,
   open,
   onClose,
 }) => {
-  const [runKind, setRunKind] = useState<string>("company_brief");
+  const [runKind, setRunKind] =
+    useState<StartInvestigatorRunInput["runKind"]>("company_brief");
   const [researchQuestion, setResearchQuestion] = useState("");
   const mutation = useStartRun();
   const navigate = useNavigate();
@@ -65,7 +68,7 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
     e.preventDefault();
     const trimmedQuestion = researchQuestion.trim();
     const input: StartInvestigatorRunInput = {
-      runKind: runKind as StartInvestigatorRunInput["runKind"],
+      runKind,
       ...(trimmedQuestion ? { researchQuestion: trimmedQuestion } : {}),
     };
     try {
@@ -96,7 +99,12 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="run-kind">Research type</Label>
-              <Select value={runKind} onValueChange={setRunKind}>
+              <Select
+                value={runKind}
+                onValueChange={(value) =>
+                  setRunKind(value as StartInvestigatorRunInput["runKind"])
+                }
+              >
                 <SelectTrigger id="run-kind">
                   <SelectValue />
                 </SelectTrigger>
