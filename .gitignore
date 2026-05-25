@@ -25,4 +25,3 @@ tmp/
 
 # Virtual environment for Python
 .venv
-.vscode/settings.json
