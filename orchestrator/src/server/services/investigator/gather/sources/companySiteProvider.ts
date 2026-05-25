@@ -1,10 +1,8 @@
 import * as sourceService from "@server/services/investigator/sourceService";
-import type { InvestigatorProvider } from "../types";
 import { buildCompanySiteCandidateUrls } from "@server/services/investigator/urlUtils";
-import {
-  fetchPageText,
-  isBlockedHost,
-} from "../utils/html";
+import { isLocalOrPrivateHostname } from "@server/services/tracer-links";
+import type { InvestigatorProvider } from "../types";
+import { fetchPageText, isBlockedHost } from "../utils/html";
 import { truncateText } from "../utils/text";
 
 const MAX_EXCERPT_CHARS = 8000;
@@ -21,6 +19,18 @@ const PATHS = [
   "/contact",
 ] as const;
 
+function isPublicHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+    return !isLocalOrPrivateHostname(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export const companySiteProvider: InvestigatorProvider = {
   id: "company_site",
   displayName: "Company site",
@@ -29,6 +39,13 @@ export const companySiteProvider: InvestigatorProvider = {
     const companyUrl = context.dossier.companyUrl;
     if (!companyUrl) {
       return { status: "skipped", message: "No company URL" };
+    }
+
+    if (!isPublicHttpUrl(companyUrl)) {
+      return {
+        status: "skipped",
+        message: "Company URL is not a public HTTP(S) URL",
+      };
     }
 
     if (isBlockedHost(companyUrl)) {
@@ -46,7 +63,7 @@ export const companySiteProvider: InvestigatorProvider = {
     let created = 0;
 
     for (const url of candidates) {
-      if (isBlockedHost(url)) continue;
+      if (!isPublicHttpUrl(url) || isBlockedHost(url)) continue;
 
       const content = await fetchPageText(url).catch(() => null);
       if (!content || content.text.length < MIN_TEXT_CHARS) continue;
