@@ -1,5 +1,6 @@
 import { conflict, notFound } from "@infra/errors";
 import { logger } from "@infra/logger";
+import { sanitizeError } from "@infra/sanitize";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import * as jobsRepo from "@server/repositories/jobs";
@@ -232,6 +233,8 @@ export async function listLinkedJobsForDossier(
 /**
  * Ensure a dossier exists for each company in the given list.
  * If a dossier already exists (by canonical key), it is skipped.
+ * Concurrent creates that hit the UNIQUE constraint are treated as skips rather
+ * than errors, making this safe to call in parallel or on retry.
  * Returns the count of newly created dossiers.
  */
 export async function ensureDossiersForCompanies(
@@ -287,7 +290,7 @@ export async function ensureDossiersForCompanies(
       } catch (timelineErr) {
         log.warn("Failed to write dossier_created timeline event", {
           dossierId: dossier.id,
-          error: timelineErr,
+          error: sanitizeError(timelineErr),
         });
       }
     } catch (err) {
