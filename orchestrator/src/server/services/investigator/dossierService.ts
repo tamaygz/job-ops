@@ -290,7 +290,10 @@ export async function ensureDossiersForCompanies(
       } catch (timelineErr) {
         log.warn("Failed to write dossier_created timeline event", {
           dossierId: dossier.id,
-          error: sanitizeError(timelineErr),
+          error:
+            timelineErr instanceof Error
+              ? sanitizeError(timelineErr)
+              : String(timelineErr),
         });
       }
     } catch (err) {
