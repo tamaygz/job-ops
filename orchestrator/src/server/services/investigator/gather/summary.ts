@@ -1,15 +1,11 @@
-import type { RunKind, SummaryType } from "@shared/types";
 import * as summaryService from "@server/services/investigator/summaryService";
+import type { RunKind, SummaryType } from "@shared/types";
 import type { InvestigatorGatherContext } from "./types";
 
 const SUMMARY_TYPES_BY_RUN_KIND: Record<RunKind, SummaryType[]> = {
   company_brief: ["company_brief", "interview_angles"],
   people_scan: ["people_brief"],
-  dossier_refresh: [
-    "company_brief",
-    "people_brief",
-    "interview_angles",
-  ],
+  dossier_refresh: ["company_brief", "people_brief", "interview_angles"],
 };
 
 export async function runSummaryPhase(

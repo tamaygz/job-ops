@@ -11,9 +11,7 @@ import {
 
 const MAX_PEOPLE = 25;
 
-function confidenceFromReviewState(
-  reviewState: string,
-): ConfidenceLabel {
+function confidenceFromReviewState(reviewState: string): ConfidenceLabel {
   if (reviewState === "verified") return "high";
   if (reviewState === "low_confidence") return "low";
   return "medium";

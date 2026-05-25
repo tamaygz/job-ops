@@ -10,8 +10,7 @@ type BraveResponse = {
   web?: { results?: BraveWebResult[] };
 };
 
-const BRAVE_SEARCH_ENDPOINT =
-  "https://api.search.brave.com/res/v1/web/search";
+const BRAVE_SEARCH_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
 
 function resolveMarketTokens(market: string): {
   language: string | null;

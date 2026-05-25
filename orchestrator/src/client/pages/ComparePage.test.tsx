@@ -39,7 +39,9 @@ vi.mock("@client/components/layout", () => ({
       {actions}
     </header>
   ),
-  PageMain: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+  PageMain: ({ children }: { children: React.ReactNode }) => (
+    <main>{children}</main>
+  ),
 }));
 
 vi.mock("sonner", () => ({

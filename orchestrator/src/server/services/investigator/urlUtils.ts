@@ -1,6 +1,7 @@
 const HTTP_PROTOCOLS = new Set(["http:", "https:"]);
 
-const BARE_HOST_RE = /^(?:www\.|localhost(?::\d+)?(?:[/?#]|$)|(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?(?:[/?#]|$)|(?:[a-z0-9-]+\.)+[a-z0-9-]{2,}(?::\d+)?(?:[/?#]|$))/i;
+const BARE_HOST_RE =
+  /^(?:www\.|localhost(?::\d+)?(?:[/?#]|$)|(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?(?:[/?#]|$)|(?:[a-z0-9-]+\.)+[a-z0-9-]{2,}(?::\d+)?(?:[/?#]|$))/i;
 
 function toCandidateUrl(input: string): string {
   if (input.startsWith("//")) {

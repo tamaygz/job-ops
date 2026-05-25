@@ -8,10 +8,7 @@ const MAX_EXCERPT_CHARS = 8000;
 
 function buildJobExcerpt(job: Awaited<ReturnType<typeof jobsRepo.getJobById>>) {
   if (!job) return null;
-  const lines = [
-    `Job Title: ${job.title}`,
-    `Company: ${job.employer}`,
-  ];
+  const lines = [`Job Title: ${job.title}`, `Company: ${job.employer}`];
   if (job.location) lines.push(`Location: ${job.location}`);
   if (job.salary) lines.push(`Salary: ${job.salary}`);
   if (job.jobDescription) {

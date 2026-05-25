@@ -1,8 +1,5 @@
 import type { Logger } from "@infra/logger";
-import type {
-  InvestigatorDossier,
-  RunKind,
-} from "@shared/types";
+import type { InvestigatorDossier, RunKind } from "@shared/types";
 import type { RunProgressEvent } from "../runProgress";
 import type { InvestigatorGatherSettings } from "./settings";
 
