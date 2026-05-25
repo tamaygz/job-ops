@@ -50,6 +50,7 @@ function formatValue(value: unknown): string {
       value.length > 0 &&
       typeof value[0] === "object" &&
       value[0] !== null &&
+      "providerId" in value[0] &&
       "status" in value[0]
     ) {
       return value
