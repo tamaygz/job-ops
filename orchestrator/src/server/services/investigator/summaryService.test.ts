@@ -27,15 +27,18 @@ vi.mock("@server/services/modelSelection", () => ({
 }));
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
-import * as settingsRepo from "@server/repositories/settings";
 import * as sourceRepo from "@server/repositories/investigatorSourceRepository";
 import * as summaryRepo from "@server/repositories/investigatorSummaryRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
+import * as settingsRepo from "@server/repositories/settings";
+import {
+  buildSummaryPrompt,
+  regenerateSummary,
+} from "@server/services/investigator/summaryService";
 import {
   createConfiguredLlmService,
   resolveLlmModel,
 } from "@server/services/modelSelection";
-import { regenerateSummary } from "@server/services/investigator/summaryService";
 import type { InvestigatorSource, InvestigatorSummary } from "@shared/types";
 
 describe("investigator summaryService", () => {
@@ -158,16 +161,14 @@ describe("investigator summaryService", () => {
     const llmServiceMock = {
       callJson,
     } as unknown as Awaited<ReturnType<typeof createConfiguredLlmService>>;
-    vi.mocked(createConfiguredLlmService).mockResolvedValue(
-      llmServiceMock,
-    );
+    vi.mocked(createConfiguredLlmService).mockResolvedValue(llmServiceMock);
 
     await regenerateSummary("dossier-1", "company_brief");
 
     expect(callJson).toHaveBeenCalledTimes(1);
-    const [[input]] = callJson.mock.calls as Array<[
-      { messages: Array<{ role: string; content: string }> },
-    ]>;
+    const [[input]] = callJson.mock.calls as Array<
+      [{ messages: Array<{ role: string; content: string }> }]
+    >;
     expect(input.messages[0]?.content).toBe(
       "Use concise dossier analysis output.",
     );
@@ -181,5 +182,46 @@ describe("investigator summaryService", () => {
         version: 1,
       }),
     );
+  });
+
+  it("includes driving research question section only when provided", () => {
+    const sources = [
+      {
+        id: "source-1",
+        tenantId: "tenant-1",
+        dossierId: "dossier-1",
+        runId: null,
+        sourceType: "other_web_page",
+        title: "Source 1",
+        url: null,
+        sourceHost: null,
+        capturedExcerpt: "excerpt",
+        retrievedAt: 0,
+        reviewState: "verified",
+        reviewerNote: null,
+        contentHash: null,
+        createdAt: "",
+        updatedAt: "",
+      },
+    ] as InvestigatorSource[];
+
+    const promptWithQuestion = buildSummaryPrompt(
+      "Acme",
+      null,
+      sources,
+      "company_brief",
+      undefined,
+      "What should I focus on?",
+    );
+    expect(promptWithQuestion).toContain("## Driving Research Question");
+    expect(promptWithQuestion).toContain("What should I focus on?");
+
+    const promptWithoutQuestion = buildSummaryPrompt(
+      "Acme",
+      null,
+      sources,
+      "company_brief",
+    );
+    expect(promptWithoutQuestion).not.toContain("## Driving Research Question");
   });
 });

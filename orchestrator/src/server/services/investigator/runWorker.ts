@@ -6,8 +6,8 @@ import { getJobQueue } from "@server/infra/job-queue-registry";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as runRepo from "@server/repositories/investigatorRunRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
-import { notifyRunProgress } from "./runProgress";
 import { runInvestigatorPhases } from "./gather/runPhases";
+import { notifyRunProgress } from "./runProgress";
 
 const log = logger.child({ service: "runWorker" });
 
@@ -97,10 +97,10 @@ async function processQueuedRun(
       });
 
       try {
-        const seedCtx = run.seedContext as Record<string, unknown> | null;
+        const researchQuestionValue = run.seedContext?.researchQuestion;
         const researchQuestion =
-          typeof seedCtx?.researchQuestion === "string"
-            ? seedCtx.researchQuestion
+          typeof researchQuestionValue === "string"
+            ? researchQuestionValue
             : null;
 
         const { failures } = await runInvestigatorPhases({
@@ -128,7 +128,8 @@ async function processQueuedRun(
         }
 
         const completedAt = Math.floor(Date.now() / 1000);
-        const finalStatus = failures.length > 0 ? "partial_failed" : "completed";
+        const finalStatus =
+          failures.length > 0 ? "partial_failed" : "completed";
         await runRepo.updateStatus(payload.runId, finalStatus, { completedAt });
         notifyRunProgress({
           runId: payload.runId,
@@ -147,7 +148,8 @@ async function processQueuedRun(
         await timelineRepo.insertEvent({
           dossierId: payload.dossierId,
           runId: payload.runId,
-          eventType: failures.length > 0 ? "run_partial_failed" : "run_completed",
+          eventType:
+            failures.length > 0 ? "run_partial_failed" : "run_completed",
           payload:
             failures.length > 0
               ? { runKind: payload.runKind, runId: payload.runId, failures }
@@ -211,8 +213,6 @@ async function processQueuedRun(
     },
   );
 }
-
-
 
 /**
  * Exposed for integration tests — synchronously drains the queue.

@@ -8,7 +8,6 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,7 +33,10 @@ interface StartRunDialogProps {
   onClose: () => void;
 }
 
-const RUN_KIND_TO_TEMPLATE_SCOPE: Record<string, "company" | "people" | null> = {
+const RUN_KIND_TO_TEMPLATE_SCOPE: Record<
+  StartInvestigatorRunInput["runKind"],
+  "company" | "people" | null
+> = {
   company_brief: "company",
   people_scan: "people",
   dossier_refresh: null,
@@ -45,7 +47,8 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
   open,
   onClose,
 }) => {
-  const [runKind, setRunKind] = useState<string>("company_brief");
+  const [runKind, setRunKind] =
+    useState<StartInvestigatorRunInput["runKind"]>("company_brief");
   const [researchQuestion, setResearchQuestion] = useState("");
   const mutation = useStartRun();
   const navigate = useNavigate();
@@ -65,7 +68,7 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
     e.preventDefault();
     const trimmedQuestion = researchQuestion.trim();
     const input: StartInvestigatorRunInput = {
-      runKind: runKind as StartInvestigatorRunInput["runKind"],
+      runKind,
       ...(trimmedQuestion ? { researchQuestion: trimmedQuestion } : {}),
     };
     try {
@@ -96,7 +99,12 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="run-kind">Research type</Label>
-              <Select value={runKind} onValueChange={setRunKind}>
+              <Select
+                value={runKind}
+                onValueChange={(value) =>
+                  setRunKind(value as StartInvestigatorRunInput["runKind"])
+                }
+              >
                 <SelectTrigger id="run-kind">
                   <SelectValue />
                 </SelectTrigger>
@@ -120,14 +128,16 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
               </Label>
               <div className="flex flex-wrap gap-1.5 pb-1">
                 {filteredTemplates.map((template) => (
-                  <Badge
+                  <Button
                     key={template.id}
+                    type="button"
                     variant="outline"
-                    className="cursor-pointer hover:bg-accent text-xs"
+                    size="sm"
+                    className="h-auto px-2 py-1 text-xs"
                     onClick={() => setResearchQuestion(template.question)}
                   >
                     {template.label}
-                  </Badge>
+                  </Button>
                 ))}
               </div>
               <Textarea
