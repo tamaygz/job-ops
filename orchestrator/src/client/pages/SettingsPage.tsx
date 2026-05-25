@@ -29,6 +29,7 @@ import { PromptTemplatesSection } from "@client/pages/settings/components/Prompt
 import { ReactiveResumeSection } from "@client/pages/settings/components/ReactiveResumeSection";
 import { ScoringSettingsSection } from "@client/pages/settings/components/ScoringSettingsSection";
 import { TracerLinksSettingsSection } from "@client/pages/settings/components/TracerLinksSettingsSection";
+import { WebSearchSettingsSection } from "@client/pages/settings/components/WebSearchSettingsSection";
 import { WebhooksSection } from "@client/pages/settings/components/WebhooksSection";
 import {
   type LlmProviderId,
@@ -47,6 +48,8 @@ import type {
   ResumeProjectCatalogItem,
   ResumeProjectsSettings,
   ValidationResult,
+  WebSearchProviderId,
+  WEB_SEARCH_PROVIDER_VALUES,
 } from "@shared/types.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Settings } from "lucide-react";
@@ -137,6 +140,7 @@ type SettingsSectionId =
   | "investigator"
   | "scoring"
   | "reactive-resume"
+  | "web-search"
   | "webhooks"
   | "tracer-links"
   | "environment"
