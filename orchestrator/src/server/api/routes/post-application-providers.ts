@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { badRequest, serviceUnavailable, upstreamError } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import { logger } from "@infra/logger";
+import { resolveRequestOrigin } from "@server/infra/request-origin";
 import { O365_OAUTH_SCOPE } from "@server/services/post-application/ingestion/o365-api";
 import { executePostApplicationProviderAction } from "@server/services/post-application/providers";
 import { getActiveTenantId } from "@server/tenancy/context";
@@ -357,7 +358,12 @@ function resolveO365OauthConfig(req: Request): {
   const configuredRedirectUri = asNonEmptyString(
     process.env.O365_OAUTH_REDIRECT_URI,
   );
-  const origin = `${req.protocol}://${req.get("host")}`;
+  const origin = resolveRequestOrigin(req);
+  if (!configuredRedirectUri && !origin) {
+    throw serviceUnavailable(
+      "Cannot determine OAuth redirect URI: request origin is unavailable. Set JOBOPS_PUBLIC_BASE_URL or O365_OAUTH_REDIRECT_URI.",
+    );
+  }
   const redirectUri = configuredRedirectUri ?? `${origin}/oauth/o365/callback`;
   const azureTenantId =
     asNonEmptyString(process.env.O365_OAUTH_TENANT_ID) ?? "common";
@@ -405,7 +411,20 @@ async function exchangeO365AuthorizationCode(args: {
     unknown
   >;
   if (!response.ok) {
-    throw upstreamError("Microsoft OAuth token exchange failed.");
+    const upstreamOAuthError = asNonEmptyString(data.error);
+    const upstreamOAuthErrorDescription = asNonEmptyString(
+      data.error_description,
+    );
+    const messageParts = [
+      `Microsoft OAuth token exchange failed with status ${response.status}.`,
+      ...(upstreamOAuthError
+        ? [`error: ${upstreamOAuthError}.`]
+        : []),
+      ...(upstreamOAuthErrorDescription
+        ? [`error_description: ${upstreamOAuthErrorDescription}`]
+        : []),
+    ];
+    throw upstreamError(messageParts.join(" "));
   }
 
   const refreshToken = asNonEmptyString(data.refresh_token);
