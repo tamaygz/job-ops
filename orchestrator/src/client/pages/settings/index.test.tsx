@@ -136,9 +136,19 @@ const openPromptTemplatesSection = async () => {
   await clickLastButtonByName(/prompt templates/i);
 };
 
+const openInvestigatorSection = async () => {
+  await openNavGroup(/^ai$/i);
+  await clickLastButtonByName(/investigator/i);
+};
+
 const openReactiveResumeSection = async () => {
   await openNavGroup(/^integrations$/i);
   await clickLastButtonByName(/reactive resume/i);
+};
+
+const openWebSearchSection = async () => {
+  await openNavGroup(/^integrations$/i);
+  await clickLastButtonByName(/web search/i);
 };
 
 const openDisplaySection = async () => {
@@ -223,6 +233,79 @@ describe("SettingsPage", () => {
       }),
     );
     expect(toast.success).toHaveBeenCalledWith("Settings saved");
+  });
+
+  it("saves investigator summary settings", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
+    vi.mocked(api.updateSettings).mockResolvedValue(baseSettings);
+
+    renderPage();
+    await openInvestigatorSection();
+
+    const sourceLimitInput = screen.getByLabelText(/sources per summary/i);
+    const excerptInput = screen.getByLabelText(/excerpt characters per source/i);
+    const promptInput = screen.getByLabelText(/summary system prompt/i);
+    await waitFor(() => expect(sourceLimitInput).toBeEnabled());
+
+    fireEvent.change(sourceLimitInput, {
+      target: { value: "30" },
+    });
+    fireEvent.change(excerptInput, {
+      target: { value: "50" },
+    });
+    fireEvent.change(promptInput, {
+      target: { value: "Use the most reliable evidence first." },
+    });
+
+    const saveButton = getSaveButton();
+    await waitFor(() => expect(saveButton).toBeEnabled());
+    fireEvent.click(saveButton);
+
+    await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
+    expect(api.updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        investigatorSummarySourceLimit: 25,
+        investigatorSummaryExcerptMaxChars: 100,
+        investigatorSummarySystemPromptTemplate:
+          "Use the most reliable evidence first.",
+      }),
+    );
+  });
+
+  it("saves web search tuning settings", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
+    vi.mocked(api.updateSettings).mockResolvedValue(baseSettings);
+
+    renderPage();
+    await openWebSearchSection();
+
+    const resultLimitInput = screen.getByLabelText(/results per provider/i);
+    const marketInput = screen.getByLabelText(/market \/ locale/i);
+    const searxngInput = screen.getByLabelText(/searxng base url/i);
+    await waitFor(() => expect(resultLimitInput).toBeEnabled());
+
+    fireEvent.change(resultLimitInput, {
+      target: { value: "30" },
+    });
+    fireEvent.change(marketInput, {
+      target: { value: "en-GB" },
+    });
+    fireEvent.change(searxngInput, {
+      target: { value: " https://search.example.test " },
+    });
+
+    const saveButton = getSaveButton();
+    await waitFor(() => expect(saveButton).toBeEnabled());
+    fireEvent.click(saveButton);
+
+    await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
+    expect(api.updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webSearchResultLimit: 25,
+        webSearchMarket: "en-GB",
+        webSearchSearxngBaseUrl: "https://search.example.test",
+      }),
+    );
   });
 
   it("starts codex sign-in from model settings", async () => {
@@ -692,6 +775,19 @@ describe("SettingsPage", () => {
       /show visa sponsor information/i,
     );
     fireEvent.click(sponsorCheckbox);
+    await waitFor(() => expect(saveButton).toBeEnabled());
+  });
+
+  it("enables save button when web-search provider selection changes", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
+
+    renderPage();
+    const saveButton = getSaveButton();
+
+    await openWebSearchSection();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /searxng/i }));
+
     await waitFor(() => expect(saveButton).toBeEnabled());
   });
 
