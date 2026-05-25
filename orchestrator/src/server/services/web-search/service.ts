@@ -10,11 +10,20 @@ import type {
 
 const log = logger.child({ service: "webSearch" });
 
+export type WebSearchProviderOutcome = {
+  providerId: WebSearchProviderId;
+  displayName: string;
+  status: "success" | "skipped" | "failed";
+  resultCount: number;
+  message?: string;
+};
+
 export type WebSearchRunResult = {
   results: WebSearchResult[];
   failures: string[];
   skipped: string[];
   providersAttempted: number;
+  providerOutcomes: WebSearchProviderOutcome[];
 };
 
 function normalizeQuery(value: string): string {
@@ -47,6 +56,7 @@ export async function runWebSearch(
       failures: [],
       skipped: ["Empty search query"],
       providersAttempted: 0,
+      providerOutcomes: [],
     };
   }
 
@@ -55,6 +65,7 @@ export async function runWebSearch(
   const failures: string[] = [];
   const skipped: string[] = [];
   const results: WebSearchResult[] = [];
+  const providerOutcomes: WebSearchProviderOutcome[] = [];
   const seen = new Set<string>();
 
   if (providerIds.length === 0) {
@@ -63,6 +74,7 @@ export async function runWebSearch(
       failures,
       skipped: ["No web search providers configured"],
       providersAttempted: 0,
+      providerOutcomes,
     };
   }
 
@@ -81,21 +93,51 @@ export async function runWebSearch(
       const outcome = await provider.search(trimmedQuery, settings);
       if (outcome.status === "failed") {
         failures.push(outcome.message || provider.displayName);
+        providerOutcomes.push({
+          providerId,
+          displayName: provider.displayName,
+          status: "failed",
+          resultCount: 0,
+          message: outcome.message,
+        });
         continue;
       }
       if (outcome.status === "skipped") {
         skipped.push(outcome.message || provider.displayName);
+        providerOutcomes.push({
+          providerId,
+          displayName: provider.displayName,
+          status: "skipped",
+          resultCount: 0,
+          message: outcome.message,
+        });
         continue;
       }
 
+      let providerResultCount = 0;
       for (const result of outcome.results ?? []) {
         const key = dedupeKey(result);
         if (seen.has(key)) continue;
         seen.add(key);
         results.push(result);
+        providerResultCount += 1;
       }
+
+      providerOutcomes.push({
+        providerId,
+        displayName: provider.displayName,
+        status: "success",
+        resultCount: providerResultCount,
+      });
     } catch (error) {
       failures.push(provider.displayName);
+      providerOutcomes.push({
+        providerId,
+        displayName: provider.displayName,
+        status: "failed",
+        resultCount: 0,
+        message: "Unexpected error",
+      });
       log.warn("Web search provider failed", {
         provider: provider.id,
         error: sanitizeError(
@@ -110,5 +152,6 @@ export async function runWebSearch(
     failures,
     skipped,
     providersAttempted,
+    providerOutcomes,
   };
 }

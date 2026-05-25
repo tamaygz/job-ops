@@ -69,6 +69,7 @@ describe("web-search/service", () => {
       failures: [],
       skipped: ["Empty search query"],
       providersAttempted: 0,
+      providerOutcomes: [],
     });
     expect(mocks.loadWebSearchSettings).not.toHaveBeenCalled();
   });
@@ -86,6 +87,7 @@ describe("web-search/service", () => {
       failures: [],
       skipped: ["No web search providers configured"],
       providersAttempted: 0,
+      providerOutcomes: [],
     });
   });
 
@@ -142,6 +144,28 @@ describe("web-search/service", () => {
       failures: ["Upstream returned 500"],
       skipped: ["Brave API key missing"],
       providersAttempted: 3,
+      providerOutcomes: [
+        {
+          providerId: "bing",
+          displayName: "Bing Search",
+          status: "success",
+          resultCount: 1,
+        },
+        {
+          providerId: "brave",
+          displayName: "Brave Search",
+          status: "skipped",
+          resultCount: 0,
+          message: "Brave API key missing",
+        },
+        {
+          providerId: "searxng",
+          displayName: "SearXNG",
+          status: "failed",
+          resultCount: 0,
+          message: "Upstream returned 500",
+        },
+      ],
     });
   });
 
@@ -160,6 +184,15 @@ describe("web-search/service", () => {
       failures: ["Bing Search"],
       skipped: [],
       providersAttempted: 1,
+      providerOutcomes: [
+        {
+          providerId: "bing",
+          displayName: "Bing Search",
+          status: "failed",
+          resultCount: 0,
+          message: "Unexpected error",
+        },
+      ],
     });
     expect(mocks.logWarn).toHaveBeenCalledWith(
       "Web search provider failed",

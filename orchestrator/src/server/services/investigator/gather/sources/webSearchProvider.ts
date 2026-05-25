@@ -51,6 +51,13 @@ export const webSearchProvider: InvestigatorProvider = {
           query,
           resultCount: search.results.length,
           providersAttempted: search.providersAttempted,
+          providers: search.providerOutcomes.map((o) => ({
+            id: o.providerId,
+            name: o.displayName,
+            status: o.status,
+            resultCount: o.resultCount,
+            ...(o.message ? { message: o.message } : {}),
+          })),
         },
         { runId: context.runId },
       )
