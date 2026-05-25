@@ -271,18 +271,25 @@ export async function ensureDossiersForCompanies(
         status: "watchlist",
       });
 
-      await writeTimelineEvent({
-        dossierId: dossier.id,
-        eventType: "dossier_created",
-        payload: {
-          companyName: company.companyName,
-          canonicalKey,
-          source: "watchlist",
-        },
-        occurredAt: nowSeconds(),
-      });
-
       created++;
+
+      try {
+        await writeTimelineEvent({
+          dossierId: dossier.id,
+          eventType: "dossier_created",
+          payload: {
+            companyName: company.companyName,
+            canonicalKey,
+            source: "watchlist",
+          },
+          occurredAt: nowSeconds(),
+        });
+      } catch (timelineErr) {
+        log.warn("Failed to write dossier_created timeline event", {
+          dossierId: dossier.id,
+          error: timelineErr,
+        });
+      }
     } catch (err) {
       if (
         err instanceof Error &&
