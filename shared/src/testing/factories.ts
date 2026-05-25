@@ -217,6 +217,41 @@ export const createAppSettings = (
     default: getDefaultPromptTemplate("scoringPromptTemplate"),
     override: null,
   },
+  investigatorSourceProviders: {
+    value: ["linked_jobs", "company_site", "web_search"],
+    default: ["linked_jobs", "company_site", "web_search"],
+    override: null,
+  },
+  investigatorPeopleProviders: {
+    value: ["source_text"],
+    default: ["source_text"],
+    override: null,
+  },
+  investigatorSalaryProviders: {
+    value: ["job_metadata", "source_text"],
+    default: ["job_metadata", "source_text"],
+    override: null,
+  },
+  investigatorBingSearchApiKey: {
+    value: null,
+    default: null,
+    override: null,
+  },
+  investigatorBingSearchEndpoint: {
+    value: "https://api.bing.microsoft.com/v7.0/search",
+    default: "https://api.bing.microsoft.com/v7.0/search",
+    override: null,
+  },
+  investigatorBingSearchMarket: {
+    value: "en-US",
+    default: "en-US",
+    override: null,
+  },
+  investigatorBingSearchResultLimit: {
+    value: 8,
+    default: 8,
+    override: null,
+  },
   investigatorSummarySystemPromptTemplate: {
     value:
       "You are an expert business intelligence analyst. Return a JSON object with exactly three keys: \"summary\" (detailed markdown analysis), \"facts\" (string array of verifiable claims extracted from the sources), \"hypotheses\" (string array of plausible inferences not directly stated in the sources).",
