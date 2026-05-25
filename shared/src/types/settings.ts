@@ -36,6 +36,13 @@ export const LLM_PROVIDER_VALUES = [
 ] as const;
 export type LlmProviderId = (typeof LLM_PROVIDER_VALUES)[number];
 
+export const WEB_SEARCH_PROVIDER_VALUES = [
+  "bing",
+  "searxng",
+  "brave",
+] as const;
+export type WebSearchProviderId = (typeof WEB_SEARCH_PROVIDER_VALUES)[number];
+
 export const LLM_PURPOSE_VALUES = [
   "scoring",
   "tailoring",
@@ -210,6 +217,12 @@ export interface AppSettings {
   resumeProjects: Resolved<ResumeProjectsSettings>;
   pdfRenderer: Resolved<PdfRenderer>;
   typstTheme: Resolved<TypstTheme>;
+  typstBodyFont: Resolved<string>;
+  typstHeadingFont: Resolved<string>;
+  typstPrimaryColor: Resolved<string>;
+  typstTextColor: Resolved<string>;
+  typstBackgroundColor: Resolved<string>;
+  typstSecondaryBackgroundColor: Resolved<string>;
   ukvisajobsMaxJobs: Resolved<number>;
   adzunaMaxJobsPerTerm: Resolved<number>;
   gradcrackerMaxJobsPerTerm: Resolved<number>;
@@ -226,8 +239,20 @@ export interface AppSettings {
   tailoringPromptTemplate: Resolved<string>;
   scoringPromptTemplate: Resolved<string>;
   investigatorSummarySystemPromptTemplate: Resolved<string>;
+  investigatorSourceProviders: Resolved<string[]>;
+  investigatorPeopleProviders: Resolved<string[]>;
+  investigatorSalaryProviders: Resolved<string[]>;
+  investigatorBingSearchApiKey: Resolved<string | null>;
+  investigatorBingSearchEndpoint: Resolved<string>;
+  investigatorBingSearchMarket: Resolved<string>;
+  investigatorBingSearchResultLimit: Resolved<number>;
   investigatorSummarySourceLimit: Resolved<number>;
   investigatorSummaryExcerptMaxChars: Resolved<number>;
+  webSearchProviders: Resolved<WebSearchProviderId[]>;
+  webSearchResultLimit: Resolved<number>;
+  webSearchMarket: Resolved<string>;
+  webSearchBingEndpoint: Resolved<string>;
+  webSearchSearxngBaseUrl: Resolved<string>;
   searchCities: Resolved<string>;
   locationSearchScope: Resolved<LocationSearchScope>;
   locationMatchStrictness: Resolved<LocationMatchStrictness>;
@@ -269,6 +294,9 @@ export interface AppSettings {
   adzunaAppKeyHint: string | null;
   apifyTokenHint: string | null;
   webhookSecretHint: string | null;
+  webSearchBingApiKeyHint: string | null;
+  webSearchSearxngApiKeyHint: string | null;
+  webSearchBraveApiKeyHint: string | null;
 
   // Computed:
   profileProjects: ResumeProjectCatalogItem[];

@@ -7,6 +7,7 @@ import * as dossierRepo from "@server/repositories/investigatorDossierRepository
 import * as runRepo from "@server/repositories/investigatorRunRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import { notifyRunProgress } from "./runProgress";
+import { runInvestigatorPhases } from "./gather/runPhases";
 
 const log = logger.child({ service: "runWorker" });
 
@@ -96,16 +97,42 @@ async function processQueuedRun(
       });
 
       try {
-        // Execute phase stubs — actual logic lands in INV-008 through INV-012
-        await runPhaseStubs(payload.runId, payload.dossierId, payload.runKind);
+        const { failures } = await runInvestigatorPhases({
+          runId: payload.runId,
+          dossierId: payload.dossierId,
+          runKind: payload.runKind,
+          dossier,
+          seedContext: run.seedContext,
+        });
+
+        const latest = await runRepo.findById(payload.runId);
+        if (latest?.status === "cancelled") {
+          notifyRunProgress({
+            runId: payload.runId,
+            dossierId: payload.dossierId,
+            status: "cancelled",
+          });
+          log.info("Research run cancelled before completion", {
+            runId: payload.runId,
+            dossierId: payload.dossierId,
+            runKind: payload.runKind,
+          });
+          return;
+        }
 
         const completedAt = Math.floor(Date.now() / 1000);
-        await runRepo.updateStatus(payload.runId, "completed", { completedAt });
+        const finalStatus = failures.length > 0 ? "partial_failed" : "completed";
+        await runRepo.updateStatus(payload.runId, finalStatus, { completedAt });
         notifyRunProgress({
           runId: payload.runId,
           dossierId: payload.dossierId,
-          status: "completed",
+          status: finalStatus,
+          message:
+            failures.length > 0
+              ? "One or more phases failed. Review details in the timeline."
+              : undefined,
         });
+
         await dossierRepo.update(payload.dossierId, {
           lastResearchedAt: completedAt,
         });
@@ -113,8 +140,11 @@ async function processQueuedRun(
         await timelineRepo.insertEvent({
           dossierId: payload.dossierId,
           runId: payload.runId,
-          eventType: "run_completed",
-          payload: { runKind: payload.runKind, runId: payload.runId },
+          eventType: failures.length > 0 ? "run_partial_failed" : "run_completed",
+          payload:
+            failures.length > 0
+              ? { runKind: payload.runKind, runId: payload.runId, failures }
+              : { runKind: payload.runKind, runId: payload.runId },
           occurredAt: completedAt,
         });
 
@@ -122,6 +152,8 @@ async function processQueuedRun(
           runId: payload.runId,
           dossierId: payload.dossierId,
           runKind: payload.runKind,
+          status: finalStatus,
+          failures,
         });
       } catch (rawError) {
         const err =
@@ -136,8 +168,6 @@ async function processQueuedRun(
 
         const failedAt = Math.floor(Date.now() / 1000);
 
-        // For v1 stubs the full run fails atomically; per-phase partial_failed
-        // tracking is wired up when individual phase extractors land (INV-008+).
         await runRepo.updateStatus(payload.runId, "failed", {
           completedAt: failedAt,
           errorCode,
@@ -175,20 +205,7 @@ async function processQueuedRun(
   );
 }
 
-async function runPhaseStubs(
-  runId: string,
-  dossierId: string,
-  runKind: string,
-): Promise<void> {
-  // Phase 1: source fetch — stub for INV-008
-  log.info("Phase: source-fetch (stub)", { runId, dossierId, runKind });
-  // Phase 2: people extraction — stub for INV-009
-  log.info("Phase: people-extraction (stub)", { runId, dossierId, runKind });
-  // Phase 3: salary extraction — stub for INV-010
-  log.info("Phase: salary-extraction (stub)", { runId, dossierId, runKind });
-  // Phase 4: summary generation — stub for INV-012
-  log.info("Phase: summary-generation (stub)", { runId, dossierId, runKind });
-}
+
 
 /**
  * Exposed for integration tests — synchronously drains the queue.

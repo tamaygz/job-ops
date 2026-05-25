@@ -3,6 +3,7 @@ import type {
   ChatStyleManualLanguage,
   LlmPurposeApiKeyHints,
   LlmPurposeOverrides,
+  WebSearchProviderId,
 } from "@shared/types.js";
 
 export type EffectiveDefault<T> = {
@@ -64,6 +65,15 @@ export type ScoringValues = {
   scoringInstructions: EffectiveDefault<string>;
 };
 
+export type TypstStyleValues = {
+  bodyFont: EffectiveDefault<string>;
+  headingFont: EffectiveDefault<string>;
+  primaryColor: EffectiveDefault<string>;
+  textColor: EffectiveDefault<string>;
+  backgroundColor: EffectiveDefault<string>;
+  secondaryBackgroundColor: EffectiveDefault<string>;
+};
+
 export type PromptTemplatesValues = {
   ghostwriterSystemPromptTemplate: EffectiveDefault<string>;
   tailoringPromptTemplate: EffectiveDefault<string>;
@@ -74,4 +84,15 @@ export type InvestigatorValues = {
   summarySourceLimit: EffectiveDefault<number>;
   excerptMaxChars: EffectiveDefault<number>;
   systemPromptTemplate: EffectiveDefault<string>;
+};
+
+export type WebSearchValues = {
+  providers: EffectiveDefault<WebSearchProviderId[]>;
+  resultLimit: EffectiveDefault<number>;
+  market: EffectiveDefault<string>;
+  bingEndpoint: EffectiveDefault<string>;
+  searxngBaseUrl: EffectiveDefault<string>;
+  bingApiKeyHint: string | null;
+  searxngApiKeyHint: string | null;
+  braveApiKeyHint: string | null;
 };

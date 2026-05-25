@@ -3,6 +3,7 @@ import { logger } from "@infra/logger";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import * as jobsRepo from "@server/repositories/jobs";
+import { extractNormalizedHostname } from "./urlUtils";
 import type {
   CreateInvestigatorDossierInput,
   InvestigatorDossier,
@@ -26,12 +27,7 @@ export function normalizeCanonicalKey(name: string): string {
 }
 
 function extractDomain(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return null;
-  }
+  return extractNormalizedHostname(url);
 }
 
 function nowSeconds(): number {

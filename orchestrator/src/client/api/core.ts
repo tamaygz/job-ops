@@ -62,6 +62,11 @@ export type StreamSseInput =
       selectedEmailIds?: string[];
       selectedDocumentIds?: string[];
       stream: true;
+    }
+  | {
+      otherProfileUrl: string;
+      jobId?: string;
+      stream: true;
     };
 
 function describeAction(endpoint: string, method?: string): string {

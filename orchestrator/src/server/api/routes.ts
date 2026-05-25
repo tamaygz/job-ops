@@ -5,6 +5,7 @@
 import { Router } from "express";
 import { authRouter } from "./routes/auth";
 import { backupRouter } from "./routes/backup";
+import { compareRouter } from "./routes/compare";
 import { databaseRouter } from "./routes/database";
 import { demoRouter } from "./routes/demo";
 import { designResumeRouter } from "./routes/design-resume";
@@ -46,6 +47,7 @@ apiRouter.use("/backups", backupRouter);
 apiRouter.use("/tracer-links", tracerLinksRouter);
 apiRouter.use("/workspaces", workspacesRouter);
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/compare", compareRouter);
 apiRouter.use("/workday", workdayRouter);
 apiRouter.use("/watchlist", watchlistRouter);
 apiRouter.use("/investigator/dossiers", dossiersRouter);

@@ -4,7 +4,6 @@ import {
   type SectionWorkspaceBadge,
   SectionWorkspaceNav,
   SectionWorkspacePanel,
-  sectionWorkspaceItemMatchesSearch,
 } from "@client/components/section-workspace/SectionWorkspace";
 import { useUpdateSettingsMutation } from "@client/hooks/queries/useSettingsMutation";
 import { useRxResumeConfigState } from "@client/hooks/useRxResumeConfigState";
@@ -29,6 +28,8 @@ import { PromptTemplatesSection } from "@client/pages/settings/components/Prompt
 import { ReactiveResumeSection } from "@client/pages/settings/components/ReactiveResumeSection";
 import { ScoringSettingsSection } from "@client/pages/settings/components/ScoringSettingsSection";
 import { TracerLinksSettingsSection } from "@client/pages/settings/components/TracerLinksSettingsSection";
+import { TypstStyleSettingsSection } from "@client/pages/settings/components/TypstStyleSettingsSection";
+import { WebSearchSettingsSection } from "@client/pages/settings/components/WebSearchSettingsSection";
 import { WebhooksSection } from "@client/pages/settings/components/WebhooksSection";
 import {
   type LlmProviderId,
@@ -47,7 +48,9 @@ import type {
   ResumeProjectCatalogItem,
   ResumeProjectsSettings,
   ValidationResult,
+  WebSearchProviderId,
 } from "@shared/types.js";
+import { WEB_SEARCH_PROVIDER_VALUES } from "@shared/types.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Settings } from "lucide-react";
 import type React from "react";
@@ -65,6 +68,17 @@ import { formatUserFacingError } from "@/client/lib/error-format";
 import { showErrorToast } from "@/client/lib/error-toast";
 import { queryKeys } from "@/client/lib/queryKeys";
 import { Button } from "@/components/ui/button";
+import {
+  findSettingsGroupBySection,
+  findSettingsSectionDescriptor,
+  getAllSettingsSectionIds,
+  matchesSettingsSearch,
+  SECTION_FIELD_MAP,
+  SETTINGS_NAV_GROUPS,
+  type SettingsGroupId,
+  type SettingsSectionDescriptor,
+  type SettingsSectionId,
+} from "./sections";
 
 const DEFAULT_FORM_VALUES: UpdateSettingsInput = {
   model: "",
@@ -81,6 +95,12 @@ const DEFAULT_FORM_VALUES: UpdateSettingsInput = {
   resumeProjects: null,
   pdfRenderer: "rxresume",
   typstTheme: "classic",
+  typstBodyFont: "",
+  typstHeadingFont: "",
+  typstPrimaryColor: "",
+  typstTextColor: "",
+  typstBackgroundColor: "",
+  typstSecondaryBackgroundColor: "",
   rxresumeBaseResumeId: null,
   showSponsorInfo: null,
   renderMarkdownInJobDescriptions: null,
@@ -114,6 +134,14 @@ const DEFAULT_FORM_VALUES: UpdateSettingsInput = {
   investigatorSummarySystemPromptTemplate: "",
   investigatorSummarySourceLimit: null,
   investigatorSummaryExcerptMaxChars: null,
+  webSearchProviders: [],
+  webSearchResultLimit: null,
+  webSearchMarket: "",
+  webSearchBingEndpoint: null,
+  webSearchSearxngBaseUrl: null,
+  webSearchBingApiKey: "",
+  webSearchSearxngApiKey: "",
+  webSearchBraveApiKey: "",
 };
 
 type LlmProviderValue = LlmProviderId | null;
@@ -129,238 +157,6 @@ const EMPTY_RXRESUME_VALIDATION_BADGE_STATE: RxResumeValidationBadgeState = {
   message: null,
   status: null,
 };
-
-type SettingsSectionId =
-  | "model"
-  | "chat"
-  | "prompt-templates"
-  | "investigator"
-  | "scoring"
-  | "reactive-resume"
-  | "webhooks"
-  | "tracer-links"
-  | "environment"
-  | "display"
-  | "backup"
-  | "danger-zone";
-
-type SettingsGroupId =
-  | "ai"
-  | "scoring"
-  | "integrations"
-  | "workspaces"
-  | "display"
-  | "backups"
-  | "danger";
-
-type SettingsSectionDescriptor = {
-  id: SettingsSectionId;
-  label: string;
-  description: string;
-  searchTerms: string[];
-};
-
-type SettingsNavGroup = {
-  id: SettingsGroupId;
-  items: SettingsSectionDescriptor[];
-  label: string;
-};
-
-const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
-  {
-    id: "ai",
-    label: "AI",
-    items: [
-      {
-        id: "model",
-        label: "Models",
-        description: "Provider, API credentials, and task-specific overrides.",
-        searchTerms: [
-          "llm",
-          "provider",
-          "openai",
-          "glm",
-          "gemini",
-          "gemini_cli",
-          "ollama",
-          "codex",
-        ],
-      },
-      {
-        id: "chat",
-        label: "Writing Style",
-        description: "Tone, language, presets, and writing constraints.",
-        searchTerms: ["ghostwriter", "language", "tone", "formality"],
-      },
-      {
-        id: "prompt-templates",
-        label: "Prompt Templates",
-        description:
-          "Base AI instructions for Ghostwriter, tailoring, and scoring.",
-        searchTerms: ["prompt", "templates", "system prompt", "instructions"],
-      },
-      {
-        id: "investigator",
-        label: "Investigator",
-        description: "Summary prompt defaults and evidence limits.",
-        searchTerms: ["investigator", "dossier", "research", "summary"],
-      },
-    ],
-  },
-  {
-    id: "scoring",
-    label: "Scoring",
-    items: [
-      {
-        id: "scoring",
-        label: "Rules & Filters",
-        description:
-          "Salary penalties, thresholds, keywords, and scorer hints.",
-        searchTerms: ["threshold", "salary", "keywords", "instructions"],
-      },
-    ],
-  },
-  {
-    id: "integrations",
-    label: "Integrations",
-    items: [
-      {
-        id: "reactive-resume",
-        label: "Reactive Resume",
-        description: "Resume sync, templates, and project selection.",
-        searchTerms: ["rxresume", "resume", "projects", "template"],
-      },
-      {
-        id: "webhooks",
-        label: "Webhooks",
-        description: "Pipeline and job completion event destinations.",
-        searchTerms: ["hooks", "notifications", "pipeline", "applied"],
-      },
-      {
-        id: "tracer-links",
-        label: "Tracer Links",
-        description: "Public URL readiness and verification state.",
-        searchTerms: ["public url", "verify", "readiness", "health"],
-      },
-    ],
-  },
-  {
-    id: "workspaces",
-    label: "Workspaces & Security",
-    items: [
-      {
-        id: "environment",
-        label: "Workspace Access",
-        description: "Service credentials and authentication protection.",
-        searchTerms: ["security", "auth", "adzuna", "ukvisajobs"],
-      },
-    ],
-  },
-  {
-    id: "display",
-    label: "Display",
-    items: [
-      {
-        id: "display",
-        label: "Display Preferences",
-        description: "Sponsor badges and markdown rendering behavior.",
-        searchTerms: ["markdown", "sponsor", "rendering", "appearance"],
-      },
-    ],
-  },
-  {
-    id: "backups",
-    label: "Backups",
-    items: [
-      {
-        id: "backup",
-        label: "Backups",
-        description: "Automatic schedules, retention, and manual snapshots.",
-        searchTerms: ["recovery", "database", "restore", "schedule"],
-      },
-    ],
-  },
-  {
-    id: "danger",
-    label: "Danger Zone",
-    items: [
-      {
-        id: "danger-zone",
-        label: "Danger Zone",
-        description: "Delete jobs, runs, or the full local database.",
-        searchTerms: ["delete", "clear", "cleanup", "destructive"],
-      },
-    ],
-  },
-];
-
-const SECTION_FIELD_MAP: Record<
-  SettingsSectionId,
-  Array<keyof UpdateSettingsInput>
-> = {
-  model: [
-    "llmProvider",
-    "llmBaseUrl",
-    "llmApiKey",
-    "llmPurposeOverrides",
-    "llmPurposeApiKeys",
-    "model",
-    "modelScorer",
-    "modelTailoring",
-    "modelProjectSelection",
-  ],
-  chat: [
-    "chatStyleTone",
-    "chatStyleFormality",
-    "chatStyleConstraints",
-    "chatStyleDoNotUse",
-    "ghostwriterStopSlopEnabled",
-    "chatStyleLanguageMode",
-    "chatStyleManualLanguage",
-  ],
-  "prompt-templates": [
-    "ghostwriterSystemPromptTemplate",
-    "tailoringPromptTemplate",
-    "scoringPromptTemplate",
-  ],
-  investigator: [
-    "investigatorSummarySystemPromptTemplate",
-    "investigatorSummarySourceLimit",
-    "investigatorSummaryExcerptMaxChars",
-  ],
-  scoring: [
-    "penalizeMissingSalary",
-    "missingSalaryPenalty",
-    "autoSkipScoreThreshold",
-    "blockedCompanyKeywords",
-    "scoringInstructions",
-  ],
-  "reactive-resume": [
-    "pdfRenderer",
-    "rxresumeBaseResumeId",
-    "rxresumeApiKey",
-    "rxresumeUrl",
-    "resumeProjects",
-  ],
-  webhooks: ["pipelineWebhookUrl", "jobCompleteWebhookUrl", "webhookSecret"],
-  "tracer-links": [],
-  environment: [
-    "ukvisajobsEmail",
-    "ukvisajobsPassword",
-    "adzunaAppId",
-    "adzunaAppKey",
-  ],
-  display: ["showSponsorInfo", "renderMarkdownInJobDescriptions"],
-  backup: ["backupEnabled", "backupHour", "backupMaxCount"],
-  "danger-zone": [],
-};
-
-function matchesSettingsSearch(
-  searchTerm: string,
-  item: SettingsSectionDescriptor,
-): boolean {
-  return sectionWorkspaceItemMatchesSearch(searchTerm, item);
-}
 
 const getRxResumeValidationFields = (): Array<keyof UpdateSettingsInput> => [
   "rxresumeApiKey",
@@ -421,6 +217,12 @@ const NULL_SETTINGS_PAYLOAD: UpdateSettingsInput = {
   resumeProjects: null,
   pdfRenderer: null,
   typstTheme: null,
+  typstBodyFont: null,
+  typstHeadingFont: null,
+  typstPrimaryColor: null,
+  typstTextColor: null,
+  typstBackgroundColor: null,
+  typstSecondaryBackgroundColor: null,
   rxresumeBaseResumeId: null,
   showSponsorInfo: null,
   renderMarkdownInJobDescriptions: null,
@@ -455,6 +257,14 @@ const NULL_SETTINGS_PAYLOAD: UpdateSettingsInput = {
   investigatorSummarySystemPromptTemplate: null,
   investigatorSummarySourceLimit: null,
   investigatorSummaryExcerptMaxChars: null,
+  webSearchProviders: null,
+  webSearchResultLimit: null,
+  webSearchMarket: null,
+  webSearchBingEndpoint: null,
+  webSearchSearxngBaseUrl: null,
+  webSearchBingApiKey: null,
+  webSearchSearxngApiKey: null,
+  webSearchBraveApiKey: null,
 };
 
 const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
@@ -474,6 +284,13 @@ const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
   resumeProjects: data.resumeProjects.override,
   pdfRenderer: data.pdfRenderer.override ?? data.pdfRenderer.value,
   typstTheme: data.typstTheme.override ?? data.typstTheme.value,
+  typstBodyFont: data.typstBodyFont.override ?? "",
+  typstHeadingFont: data.typstHeadingFont.override ?? "",
+  typstPrimaryColor: data.typstPrimaryColor.override ?? "",
+  typstTextColor: data.typstTextColor.override ?? "",
+  typstBackgroundColor: data.typstBackgroundColor.override ?? "",
+  typstSecondaryBackgroundColor:
+    data.typstSecondaryBackgroundColor.override ?? "",
   rxresumeBaseResumeId: data.rxresumeBaseResumeId,
   showSponsorInfo: data.showSponsorInfo.override,
   renderMarkdownInJobDescriptions:
@@ -513,6 +330,15 @@ const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
     data.investigatorSummarySourceLimit.override,
   investigatorSummaryExcerptMaxChars:
     data.investigatorSummaryExcerptMaxChars.override,
+  webSearchProviders:
+    data.webSearchProviders.override ?? data.webSearchProviders.value ?? [],
+  webSearchResultLimit: data.webSearchResultLimit.override,
+  webSearchMarket: data.webSearchMarket.override ?? "",
+  webSearchBingEndpoint: data.webSearchBingEndpoint.override ?? null,
+  webSearchSearxngBaseUrl: data.webSearchSearxngBaseUrl.override ?? null,
+  webSearchBingApiKey: "",
+  webSearchSearxngApiKey: "",
+  webSearchBraveApiKey: "",
 });
 
 const normalizeString = (value: string | null | undefined) => {
@@ -574,6 +400,21 @@ const normalizePurposeApiKeys = (
 const stringArraysEqual = (left: string[], right: string[]): boolean => {
   if (left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
+};
+
+const normalizeWebSearchProviders = (
+  value: WebSearchProviderId[] | null | undefined,
+): WebSearchProviderId[] => {
+  const allowed = new Set<string>(WEB_SEARCH_PROVIDER_VALUES);
+  const out: WebSearchProviderId[] = [];
+  const seen = new Set<string>();
+  for (const provider of value ?? []) {
+    if (!allowed.has(provider)) continue;
+    if (seen.has(provider)) continue;
+    seen.add(provider);
+    out.push(provider);
+  }
+  return out;
 };
 
 const nullIfSame = <T,>(value: T | null | undefined, defaultValue: T) =>
@@ -645,6 +486,32 @@ const getDerivedSettings = (settings: AppSettings | null) => {
       typstTheme: {
         effective: settings?.typstTheme?.value ?? "classic",
         default: settings?.typstTheme?.default ?? "classic",
+      },
+    },
+    typstStyle: {
+      bodyFont: {
+        effective: settings?.typstBodyFont?.value ?? "",
+        default: settings?.typstBodyFont?.default ?? "",
+      },
+      headingFont: {
+        effective: settings?.typstHeadingFont?.value ?? "",
+        default: settings?.typstHeadingFont?.default ?? "",
+      },
+      primaryColor: {
+        effective: settings?.typstPrimaryColor?.value ?? "",
+        default: settings?.typstPrimaryColor?.default ?? "",
+      },
+      textColor: {
+        effective: settings?.typstTextColor?.value ?? "",
+        default: settings?.typstTextColor?.default ?? "",
+      },
+      backgroundColor: {
+        effective: settings?.typstBackgroundColor?.value ?? "",
+        default: settings?.typstBackgroundColor?.default ?? "",
+      },
+      secondaryBackgroundColor: {
+        effective: settings?.typstSecondaryBackgroundColor?.value ?? "",
+        default: settings?.typstSecondaryBackgroundColor?.default ?? "",
       },
     },
     display: {
@@ -779,6 +646,35 @@ const getDerivedSettings = (settings: AppSettings | null) => {
           settings?.investigatorSummaryExcerptMaxChars?.default ?? 500,
       },
     },
+    webSearch: {
+      providers: {
+        effective: settings?.webSearchProviders?.value ?? [],
+        default: settings?.webSearchProviders?.default ?? [],
+      },
+      resultLimit: {
+        effective: settings?.webSearchResultLimit?.value ?? 8,
+        default: settings?.webSearchResultLimit?.default ?? 8,
+      },
+      market: {
+        effective: settings?.webSearchMarket?.value ?? "en-US",
+        default: settings?.webSearchMarket?.default ?? "en-US",
+      },
+      bingEndpoint: {
+        effective:
+          settings?.webSearchBingEndpoint?.value ??
+          "https://api.bing.microsoft.com/v7.0/search",
+        default:
+          settings?.webSearchBingEndpoint?.default ??
+          "https://api.bing.microsoft.com/v7.0/search",
+      },
+      searxngBaseUrl: {
+        effective: settings?.webSearchSearxngBaseUrl?.value ?? "",
+        default: settings?.webSearchSearxngBaseUrl?.default ?? "",
+      },
+      bingApiKeyHint: settings?.webSearchBingApiKeyHint ?? null,
+      searxngApiKeyHint: settings?.webSearchSearxngApiKeyHint ?? null,
+      braveApiKeyHint: settings?.webSearchBraveApiKeyHint ?? null,
+    },
   };
 };
 
@@ -792,14 +688,10 @@ export const SettingsPage: React.FC = () => {
 
   useEffect(() => {
     const hash = location.hash.replace(/^#/, "");
-    const allSectionIds = SETTINGS_NAV_GROUPS.flatMap((g) =>
-      g.items.map((i) => i.id),
-    );
+    const allSectionIds = getAllSettingsSectionIds();
     if (hash && allSectionIds.includes(hash as SettingsSectionId)) {
       setActiveSection(hash as SettingsSectionId);
-      const parentGroup = SETTINGS_NAV_GROUPS.find((g) =>
-        g.items.some((i) => i.id === hash),
-      );
+      const parentGroup = findSettingsGroupBySection(hash as SettingsSectionId);
       if (parentGroup) {
         setOpenGroups((prev) =>
           prev.includes(parentGroup.id) ? prev : [...prev, parentGroup.id],
@@ -951,6 +843,7 @@ export const SettingsPage: React.FC = () => {
     jobCompleteWebhook,
     reactiveResume,
     display,
+    typstStyle,
     chat,
     envSettings,
     defaultResumeProjects,
@@ -959,6 +852,7 @@ export const SettingsPage: React.FC = () => {
     scoring,
     promptTemplates,
     investigator,
+    webSearch,
   } = derived;
 
   const handleCreateBackup = async () => {
@@ -1166,6 +1060,21 @@ export const SettingsPage: React.FC = () => {
         if (value !== undefined) envPayload.webhookSecret = value;
       }
 
+      if (dirtyFields.webSearchBingApiKey) {
+        const value = normalizePrivateInput(data.webSearchBingApiKey);
+        if (value !== undefined) envPayload.webSearchBingApiKey = value;
+      }
+
+      if (dirtyFields.webSearchSearxngApiKey) {
+        const value = normalizePrivateInput(data.webSearchSearxngApiKey);
+        if (value !== undefined) envPayload.webSearchSearxngApiKey = value;
+      }
+
+      if (dirtyFields.webSearchBraveApiKey) {
+        const value = normalizePrivateInput(data.webSearchBraveApiKey);
+        if (value !== undefined) envPayload.webSearchBraveApiKey = value;
+      }
+
       const payload: Partial<UpdateSettingsInput> = {
         model: dirtyFields.llmProvider
           ? dirtyFields.model
@@ -1210,6 +1119,30 @@ export const SettingsPage: React.FC = () => {
         typstTheme: nullIfSame(
           data.typstTheme,
           reactiveResume.typstTheme.default,
+        ),
+        typstBodyFont: nullIfSame(
+          normalizeString(data.typstBodyFont),
+          typstStyle.bodyFont.default || null,
+        ),
+        typstHeadingFont: nullIfSame(
+          normalizeString(data.typstHeadingFont),
+          typstStyle.headingFont.default || null,
+        ),
+        typstPrimaryColor: nullIfSame(
+          normalizeString(data.typstPrimaryColor),
+          typstStyle.primaryColor.default || null,
+        ),
+        typstTextColor: nullIfSame(
+          normalizeString(data.typstTextColor),
+          typstStyle.textColor.default || null,
+        ),
+        typstBackgroundColor: nullIfSame(
+          normalizeString(data.typstBackgroundColor),
+          typstStyle.backgroundColor.default || null,
+        ),
+        typstSecondaryBackgroundColor: nullIfSame(
+          normalizeString(data.typstSecondaryBackgroundColor),
+          typstStyle.secondaryBackgroundColor.default || null,
         ),
         ...(dirtyFields.rxresumeBaseResumeId
           ? { rxresumeBaseResumeId: normalizeString(data.rxresumeBaseResumeId) }
@@ -1297,6 +1230,30 @@ export const SettingsPage: React.FC = () => {
         investigatorSummaryExcerptMaxChars: nullIfSame(
           data.investigatorSummaryExcerptMaxChars,
           investigator.excerptMaxChars.default,
+        ),
+        webSearchProviders: (() => {
+          const normalized = normalizeWebSearchProviders(
+            data.webSearchProviders,
+          );
+          return stringArraysEqual(normalized, webSearch.providers.default)
+            ? null
+            : normalized;
+        })(),
+        webSearchResultLimit: nullIfSame(
+          data.webSearchResultLimit,
+          webSearch.resultLimit.default,
+        ),
+        webSearchMarket: nullIfSame(
+          normalizeString(data.webSearchMarket),
+          webSearch.market.default,
+        ),
+        webSearchBingEndpoint: nullIfSame(
+          normalizeString(data.webSearchBingEndpoint),
+          webSearch.bingEndpoint.default,
+        ),
+        webSearchSearxngBaseUrl: nullIfSame(
+          normalizeString(data.webSearchSearxngBaseUrl),
+          webSearch.searxngBaseUrl.default,
         ),
         ...envPayload,
       };
@@ -1483,13 +1440,9 @@ export const SettingsPage: React.FC = () => {
   }, [activeSection, visibleSectionIds]);
 
   const activeSectionMeta =
-    SETTINGS_NAV_GROUPS.flatMap((group) => group.items).find(
-      (item) => item.id === activeSection,
-    ) ?? SETTINGS_NAV_GROUPS[0].items[0];
+    findSettingsSectionDescriptor(activeSection) ?? SETTINGS_NAV_GROUPS[0].items[0];
   const activeGroup =
-    SETTINGS_NAV_GROUPS.find((group) =>
-      group.items.some((item) => item.id === activeSection),
-    ) ?? SETTINGS_NAV_GROUPS[0];
+    findSettingsGroupBySection(activeSection) ?? SETTINGS_NAV_GROUPS[0];
 
   const sectionHasDirtyState = (sectionId: SettingsSectionId) =>
     SECTION_FIELD_MAP[sectionId].some((field) => Boolean(dirtyFields[field]));
@@ -1541,6 +1494,10 @@ export const SettingsPage: React.FC = () => {
         return pipelineWebhook.effective || jobCompleteWebhook.effective
           ? { label: "Configured", variant: "outline" as const }
           : { label: "Optional", variant: "secondary" as const };
+      case "web-search":
+        return webSearch.providers.effective.length > 0
+          ? { label: "Configured", variant: "outline" as const }
+          : { label: "Disabled", variant: "secondary" as const };
       case "tracer-links":
         return tracerReadiness?.status === "ready"
           ? { label: "Ready", variant: "outline" as const }
@@ -1554,6 +1511,15 @@ export const SettingsPage: React.FC = () => {
           : null;
       case "display":
         return { label: "Active", variant: "secondary" as const };
+      case "typst-style":
+        return typstStyle.bodyFont.effective ||
+          typstStyle.headingFont.effective ||
+          typstStyle.primaryColor.effective ||
+          typstStyle.textColor.effective ||
+          typstStyle.backgroundColor.effective ||
+          typstStyle.secondaryBackgroundColor.effective
+          ? { label: "Customized", variant: "outline" as const }
+          : { label: "Using defaults", variant: "secondary" as const };
       case "backup":
         return backup.backupEnabled.effective
           ? { label: "Scheduled", variant: "outline" as const }
@@ -1643,6 +1609,16 @@ export const SettingsPage: React.FC = () => {
         />
       );
       break;
+    case "web-search":
+      activeSectionContent = (
+        <WebSearchSettingsSection
+          values={webSearch}
+          isLoading={isLoading}
+          isSaving={isSaving}
+          layoutMode="panel"
+        />
+      );
+      break;
     case "webhooks":
       activeSectionContent = (
         <WebhooksSection
@@ -1680,6 +1656,16 @@ export const SettingsPage: React.FC = () => {
       activeSectionContent = (
         <DisplaySettingsSection
           values={display}
+          isLoading={isLoading}
+          isSaving={isSaving}
+          layoutMode="panel"
+        />
+      );
+      break;
+    case "typst-style":
+      activeSectionContent = (
+        <TypstStyleSettingsSection
+          values={typstStyle}
           isLoading={isLoading}
           isSaving={isSaving}
           layoutMode="panel"
