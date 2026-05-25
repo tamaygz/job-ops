@@ -4,6 +4,7 @@ import { showErrorToast } from "@client/lib/error-toast";
 import type { InvestigatorResearchRun } from "@shared/types";
 import { XCircle } from "lucide-react";
 import type React from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ const RunRow: React.FC<{
   dossierId: string;
 }> = ({ run, dossierId }) => {
   const cancelMutation = useCancelRun();
+  const navigate = useNavigate();
   const isActive = activeRunStatuses.has(run.status);
 
   const statusColor =
@@ -51,6 +53,14 @@ const RunRow: React.FC<{
           )}
         </div>
       </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 text-xs"
+        onClick={() => navigate(`/investigator/${dossierId}/runs/${run.id}`)}
+      >
+        See details
+      </Button>
       {isActive && (
         <Button
           variant="ghost"

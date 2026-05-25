@@ -27,6 +27,7 @@ import { InProgressBoardPage } from "./pages/InProgressBoardPage";
 import {
   InvestigatorDetailPage,
   InvestigatorListPage,
+  InvestigatorRunDetailPage,
 } from "./pages/investigator";
 import { JobPage } from "./pages/JobPage";
 import { O365OauthCallbackPage } from "./pages/O365OauthCallbackPage";
@@ -215,6 +216,10 @@ export const App: React.FC = () => {
                 <Route
                   path="/investigator/:dossierId"
                   element={<InvestigatorDetailPage />}
+                />
+                <Route
+                  path="/investigator/:dossierId/runs/:runId"
+                  element={<InvestigatorRunDetailPage />}
                 />
                 <Route path="/jobs/:tab" element={<OrchestratorPage />} />
                 <Route
