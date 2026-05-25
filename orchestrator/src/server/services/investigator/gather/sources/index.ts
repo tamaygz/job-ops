@@ -1,22 +1,30 @@
 import { logger } from "@infra/logger";
 import { sanitizeError } from "@infra/sanitize";
 import type { InvestigatorGatherContext } from "../types";
-import { bingSearchProvider } from "./bingSearchProvider";
 import { companySiteProvider } from "./companySiteProvider";
 import { linkedJobsProvider } from "./linkedJobsProvider";
+import { webSearchProvider } from "./webSearchProvider";
 
 const log = logger.child({ service: "investigatorSources" });
 
 const SOURCE_PROVIDERS = [
   linkedJobsProvider,
   companySiteProvider,
-  bingSearchProvider,
+  webSearchProvider,
 ];
+
+const PROVIDER_ALIASES = new Map([[
+  "bing_search",
+  "web_search",
+]]);
 
 function resolveEnabledProviders(context: InvestigatorGatherContext) {
   const enabled = new Set(
     context.settings.sourceProviders.map((value) => value.toLowerCase()),
   );
+  for (const [legacy, modern] of PROVIDER_ALIASES) {
+    if (enabled.has(legacy)) enabled.add(modern);
+  }
   return SOURCE_PROVIDERS.filter((provider) =>
     enabled.has(provider.id.toLowerCase()),
   );

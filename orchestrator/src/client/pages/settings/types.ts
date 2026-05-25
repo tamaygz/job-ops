@@ -3,6 +3,7 @@ import type {
   ChatStyleManualLanguage,
   LlmPurposeApiKeyHints,
   LlmPurposeOverrides,
+  WebSearchProviderId,
 } from "@shared/types.js";
 
 export type EffectiveDefault<T> = {
@@ -74,4 +75,15 @@ export type InvestigatorValues = {
   summarySourceLimit: EffectiveDefault<number>;
   excerptMaxChars: EffectiveDefault<number>;
   systemPromptTemplate: EffectiveDefault<string>;
+};
+
+export type WebSearchValues = {
+  providers: EffectiveDefault<WebSearchProviderId[]>;
+  resultLimit: EffectiveDefault<number>;
+  market: EffectiveDefault<string>;
+  bingEndpoint: EffectiveDefault<string>;
+  searxngBaseUrl: EffectiveDefault<string>;
+  bingApiKeyHint: string | null;
+  searxngApiKeyHint: string | null;
+  braveApiKeyHint: string | null;
 };
