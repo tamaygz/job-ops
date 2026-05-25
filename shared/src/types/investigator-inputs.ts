@@ -1,20 +1,20 @@
 import { z } from "zod";
 import {
   ConfidenceLabel,
-  DossierStatus,
-  PayInterval,
-  PersonType,
-  ReviewState,
-  SourceType,
-  SummaryType,
-  RunKind,
   type ConfidenceLabel as ConfidenceLabelType,
+  DossierStatus,
   type DossierStatus as DossierStatusType,
+  PayInterval,
   type PayInterval as PayIntervalType,
+  PersonType,
   type PersonType as PersonTypeType,
+  ReviewState,
   type ReviewState as ReviewStateType,
+  RunKind,
   type RunKind as RunKindType,
+  SourceType,
   type SourceType as SourceTypeType,
+  SummaryType,
   type SummaryType as SummaryTypeType,
 } from "./investigator-domain";
 
@@ -139,14 +139,16 @@ export const StartInvestigatorRunInputSchema = z
   .object({
     runKind: z.enum(runKindValues as [RunKindType, ...RunKindType[]]),
     seedContext: z.record(z.unknown()).nullish(),
-    researchQuestion: z.string().max(500).nullish(),
+    researchQuestion: z.string().trim().min(1).max(500).nullish(),
   })
   .strict();
 
 export const CreateInvestigatorSourceInputSchema = z
   .object({
     runId: z.string().nullish(),
-    sourceType: z.enum(sourceTypeValues as [SourceTypeType, ...SourceTypeType[]]),
+    sourceType: z.enum(
+      sourceTypeValues as [SourceTypeType, ...SourceTypeType[]],
+    ),
     title: z.string().min(1),
     url: z.string().url().nullish(),
     capturedExcerpt: z.string().min(1),
@@ -162,7 +164,9 @@ export const CreateInvestigatorPersonInputSchema = z
   .object({
     runId: z.string().nullish(),
     fullName: z.string().min(1),
-    personType: z.enum(personTypeValues as [PersonTypeType, ...PersonTypeType[]]),
+    personType: z.enum(
+      personTypeValues as [PersonTypeType, ...PersonTypeType[]],
+    ),
     title: z.string().nullish(),
     profileUrl: z.string().url().nullish(),
     roleContext: z.string().nullish(),
@@ -198,7 +202,9 @@ export const CreateInvestigatorSalaryObservationInputSchema = z
 
 export const RegenerateInvestigatorSummaryInputSchema = z
   .object({
-    summaryType: z.enum(summaryTypeValues as [SummaryTypeType, ...SummaryTypeType[]]),
+    summaryType: z.enum(
+      summaryTypeValues as [SummaryTypeType, ...SummaryTypeType[]],
+    ),
     runId: z.string().nullish(),
   })
   .strict();
@@ -255,7 +261,12 @@ export const UpdateInvestigatorPersonInputSchema = z
     roleContext: z.string().nullish(),
     notes: z.string().nullish(),
     confidenceLabel: z
-      .enum(confidenceLabelValues as [ConfidenceLabelType, ...ConfidenceLabelType[]])
+      .enum(
+        confidenceLabelValues as [
+          ConfidenceLabelType,
+          ...ConfidenceLabelType[],
+        ],
+      )
       .optional(),
     sourceIds: z.array(z.string()).optional(),
   })
@@ -289,7 +300,12 @@ export const UpdateInvestigatorSalaryObservationInputSchema = z
     equityText: z.string().nullish(),
     bonusText: z.string().nullish(),
     confidenceLabel: z
-      .enum(confidenceLabelValues as [ConfidenceLabelType, ...ConfidenceLabelType[]])
+      .enum(
+        confidenceLabelValues as [
+          ConfidenceLabelType,
+          ...ConfidenceLabelType[],
+        ],
+      )
       .optional(),
     sourceId: z.string().nullish(),
     observedAt: z.number().int().nullish(),
@@ -312,25 +328,29 @@ export const RESEARCH_QUESTION_TEMPLATES: ResearchQuestionTemplate[] = [
   {
     id: "person_expertise",
     label: "Main expertise",
-    question: "What is this person's main area of expertise and professional background?",
+    question:
+      "What is this person's main area of expertise and professional background?",
     scope: "people",
   },
   {
     id: "person_interview_questions",
     label: "Likely interview questions",
-    question: "What questions could this person ask me in an interview based on their background?",
+    question:
+      "What questions could this person ask me in an interview based on their background?",
     scope: "people",
   },
   {
     id: "person_impact",
     label: "Company impact",
-    question: "What impact has this person had on the company and what are their key achievements?",
+    question:
+      "What impact has this person had on the company and what are their key achievements?",
     scope: "people",
   },
   {
     id: "person_management_style",
     label: "Management style",
-    question: "What can be inferred about this person's management or leadership style?",
+    question:
+      "What can be inferred about this person's management or leadership style?",
     scope: "people",
   },
   {
@@ -342,37 +362,43 @@ export const RESEARCH_QUESTION_TEMPLATES: ResearchQuestionTemplate[] = [
   {
     id: "person_connection_points",
     label: "Connection points",
-    question: "What shared interests or talking points could I use to connect with this person?",
+    question:
+      "What shared interests or talking points could I use to connect with this person?",
     scope: "people",
   },
   {
     id: "company_culture",
     label: "Company culture",
-    question: "What is the company culture like and what do employees say about working there?",
+    question:
+      "What is the company culture like and what do employees say about working there?",
     scope: "company",
   },
   {
     id: "company_challenges",
     label: "Current challenges",
-    question: "What are the main challenges or problems this company is currently facing?",
+    question:
+      "What are the main challenges or problems this company is currently facing?",
     scope: "company",
   },
   {
     id: "company_recent_news",
     label: "Recent news",
-    question: "What are the most important recent news and developments about this company?",
+    question:
+      "What are the most important recent news and developments about this company?",
     scope: "company",
   },
   {
     id: "company_tech_stack",
     label: "Tech stack & tools",
-    question: "What technologies, tools, and technical practices does this company use?",
+    question:
+      "What technologies, tools, and technical practices does this company use?",
     scope: "company",
   },
   {
     id: "company_growth",
     label: "Growth & direction",
-    question: "What is the company's growth trajectory and strategic direction?",
+    question:
+      "What is the company's growth trajectory and strategic direction?",
     scope: "company",
   },
   {

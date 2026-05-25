@@ -37,9 +37,12 @@ export async function startRun(
   }
 
   const tenantId = getActiveTenantId();
+  const normalizedResearchQuestion = input.researchQuestion?.trim();
   const seedContext: Record<string, unknown> = {
     ...(input.seedContext ?? {}),
-    ...(input.researchQuestion ? { researchQuestion: input.researchQuestion } : {}),
+    ...(normalizedResearchQuestion
+      ? { researchQuestion: normalizedResearchQuestion }
+      : {}),
   };
   const run = await runRepo.create({
     dossierId,

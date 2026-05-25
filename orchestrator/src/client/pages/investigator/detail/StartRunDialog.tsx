@@ -8,7 +8,6 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,11 +33,12 @@ interface StartRunDialogProps {
   onClose: () => void;
 }
 
-const RUN_KIND_TO_TEMPLATE_SCOPE: Record<string, "company" | "people" | null> = {
-  company_brief: "company",
-  people_scan: "people",
-  dossier_refresh: null,
-};
+const RUN_KIND_TO_TEMPLATE_SCOPE: Record<string, "company" | "people" | null> =
+  {
+    company_brief: "company",
+    people_scan: "people",
+    dossier_refresh: null,
+  };
 
 export const StartRunDialog: React.FC<StartRunDialogProps> = ({
   dossierId,
@@ -120,14 +120,16 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
               </Label>
               <div className="flex flex-wrap gap-1.5 pb-1">
                 {filteredTemplates.map((template) => (
-                  <Badge
+                  <Button
                     key={template.id}
+                    type="button"
                     variant="outline"
-                    className="cursor-pointer hover:bg-accent text-xs"
+                    size="sm"
+                    className="h-auto px-2 py-1 text-xs"
                     onClick={() => setResearchQuestion(template.question)}
                   >
                     {template.label}
-                  </Badge>
+                  </Button>
                 ))}
               </div>
               <Textarea
