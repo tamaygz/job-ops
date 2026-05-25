@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableDropdown } from "@/components/ui/searchable-dropdown";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { WatchlistSourceDraftCardProps } from "./types";
 import {
@@ -92,6 +93,8 @@ export function WatchlistSourcesCard({
   newJobsCount,
   hasUnsavedChanges,
   isSaving,
+  createDossiers,
+  onCreateDossiersChange,
   onAddSource,
   onRemoveSource,
   onUpdateDraft,
@@ -458,6 +461,20 @@ export function WatchlistSourcesCard({
                 No watchlist sources selected yet.
               </div>
             ) : null}
+
+            <div className="mt-3 flex items-center gap-2">
+              <Switch
+                id="create-dossiers-toggle"
+                checked={createDossiers}
+                onCheckedChange={onCreateDossiersChange}
+              />
+              <label
+                htmlFor="create-dossiers-toggle"
+                className="cursor-pointer text-sm text-muted-foreground"
+              >
+                Create investigator dossiers for new companies
+              </label>
+            </div>
           </div>
         </AccordionContent>
       </AccordionItem>

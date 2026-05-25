@@ -228,3 +228,59 @@ export async function listLinkedJobsForDossier(
   if (!dossier) throw notFound(`Dossier ${dossierId} not found`);
   return dossierRepo.listLinkedJobsWithDetails(dossierId);
 }
+
+/**
+ * Ensure a dossier exists for each company in the given list.
+ * If a dossier already exists (by canonical key), it is skipped.
+ * Returns the count of newly created dossiers.
+ */
+export async function ensureDossiersForCompanies(
+  companies: Array<{
+    companyName: string;
+    companyUrl?: string | null;
+  }>,
+): Promise<{ created: number; skipped: number }> {
+  let created = 0;
+  let skipped = 0;
+
+  for (const company of companies) {
+    const canonicalKey = normalizeCanonicalKey(company.companyName);
+    if (!canonicalKey) {
+      skipped++;
+      continue;
+    }
+
+    const existing = await dossierRepo.findByCanonicalKey(canonicalKey);
+    if (existing) {
+      skipped++;
+      continue;
+    }
+
+    await dossierRepo.create({
+      companyName: company.companyName,
+      canonicalCompanyKey: canonicalKey,
+      companyUrl: company.companyUrl ?? null,
+      normalizedDomain: extractDomain(company.companyUrl),
+      status: "watchlist",
+    });
+
+    const dossier = await dossierRepo.findByCanonicalKey(canonicalKey);
+    if (dossier) {
+      await writeTimelineEvent({
+        dossierId: dossier.id,
+        eventType: "dossier_created",
+        payload: {
+          companyName: company.companyName,
+          canonicalKey,
+          source: "watchlist",
+        },
+        occurredAt: nowSeconds(),
+      });
+    }
+
+    created++;
+  }
+
+  log.info("Ensured dossiers for watchlist companies", { created, skipped });
+  return { created, skipped };
+}
