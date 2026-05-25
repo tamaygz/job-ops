@@ -74,6 +74,48 @@ import {
 import { getDefaultPromptTemplate } from "@shared/prompt-template-definitions.js";
 import { startServer, stopServer } from "./test-utils";
 
+type SettingsLogStreamEvent =
+  | {
+      type: "snapshot";
+      entries: Array<{ line: string; tenantId: string | null }>;
+    }
+  | {
+      type: "log";
+      entry: { line: string; tenantId: string | null };
+    };
+
+async function readNextSseEvent(input: {
+  reader: ReadableStreamDefaultReader<Uint8Array>;
+  decoder: TextDecoder;
+  remainder: { value: string };
+}): Promise<SettingsLogStreamEvent> {
+  while (true) {
+    const delimiterIndex = input.remainder.value.indexOf("\n\n");
+    if (delimiterIndex >= 0) {
+      const frame = input.remainder.value.slice(0, delimiterIndex);
+      input.remainder.value = input.remainder.value.slice(delimiterIndex + 2);
+      const payload = frame
+        .split("\n")
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice("data:".length).trimStart())
+        .join("\n");
+
+      if (!payload) {
+        continue;
+      }
+
+      return JSON.parse(payload) as SettingsLogStreamEvent;
+    }
+
+    const { done, value } = await input.reader.read();
+    if (done) {
+      throw new Error("SSE stream ended before the next event was received");
+    }
+
+    input.remainder.value += input.decoder.decode(value, { stream: true });
+  }
+}
+
 describe.sequential("Settings API routes", () => {
   let server: Server;
   let baseUrl: string;
@@ -124,6 +166,101 @@ describe.sequential("Settings API routes", () => {
     expect(body.data.scoringPromptTemplate.value).toBe(
       getDefaultPromptTemplate("scoringPromptTemplate"),
     );
+  });
+
+  it("streams buffered and live log entries filtered to the active tenant", async () => {
+    const { logger } = await import("@server/infra/logger");
+    const { runWithRequestContext } = await import(
+      "@server/infra/request-context"
+    );
+
+    logger.info("visible global log", { scope: "global" });
+    runWithRequestContext(
+      {
+        requestId: "req-tenant-default",
+        tenantId: "tenant_default",
+      },
+      () => {
+        logger.info("visible tenant log", { scope: "tenant_default" });
+      },
+    );
+    runWithRequestContext(
+      {
+        requestId: "req-tenant-other",
+        tenantId: "tenant_other",
+      },
+      () => {
+        logger.info("hidden tenant log", { scope: "tenant_other" });
+      },
+    );
+
+    const response = await fetch(`${baseUrl}/api/settings/logs/stream`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain(
+      "text/event-stream",
+    );
+    expect(response.body).toBeTruthy();
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    const remainder = { value: "" };
+
+    const snapshot = await readNextSseEvent({
+      reader,
+      decoder,
+      remainder,
+    });
+
+    expect(snapshot.type).toBe("snapshot");
+    if (snapshot.type === "snapshot") {
+      expect(
+        snapshot.entries.some((entry) =>
+          entry.line.includes("visible global log"),
+        ),
+      ).toBe(true);
+      expect(
+        snapshot.entries.some((entry) =>
+          entry.line.includes("visible tenant log"),
+        ),
+      ).toBe(true);
+      expect(
+        snapshot.entries.some((entry) => entry.line.includes("hidden tenant log")),
+      ).toBe(false);
+    }
+
+    runWithRequestContext(
+      {
+        requestId: "req-live-other",
+        tenantId: "tenant_other",
+      },
+      () => {
+        logger.info("hidden live tenant log", { scope: "tenant_other" });
+      },
+    );
+    runWithRequestContext(
+      {
+        requestId: "req-live-default",
+        tenantId: "tenant_default",
+      },
+      () => {
+        logger.info("visible live tenant log", { scope: "tenant_default" });
+      },
+    );
+
+    const liveEvent = await readNextSseEvent({
+      reader,
+      decoder,
+      remainder,
+    });
+
+    expect(liveEvent.type).toBe("log");
+    if (liveEvent.type === "log") {
+      expect(liveEvent.entry.line).toContain("visible live tenant log");
+      expect(liveEvent.entry.line).not.toContain("hidden live tenant log");
+      expect(liveEvent.entry.tenantId).toBe("tenant_default");
+    }
+
+    await reader.cancel();
   });
 
   it("does not expose Basic Auth env values through settings", async () => {
