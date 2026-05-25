@@ -21,13 +21,30 @@ import * as salaryRepo from "@server/repositories/investigatorSalaryRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import { createObservation, updateObservation } from "./salaryService";
 
+function makeDossier() {
+  return {
+    id: "dossier-1",
+    tenantId: "tenant-1",
+    companyName: "Acme Corp",
+    canonicalCompanyKey: "acme corp",
+    companyUrl: "https://acme.test",
+    normalizedDomain: "acme.test",
+    status: "active",
+    tags: [],
+    lastResearchedAt: null,
+    createdFromJobId: null,
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
 describe("salaryService", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   it("rejects invalid salary ranges during creation", async () => {
-    vi.mocked(dossierRepo.findById).mockResolvedValue({ id: "dossier-1" });
+    vi.mocked(dossierRepo.findById).mockResolvedValue(makeDossier());
 
     await expect(
       createObservation("dossier-1", {
@@ -39,7 +56,7 @@ describe("salaryService", () => {
   });
 
   it("writes a timeline event when a salary observation is created and validates updates", async () => {
-    vi.mocked(dossierRepo.findById).mockResolvedValue({ id: "dossier-1" });
+    vi.mocked(dossierRepo.findById).mockResolvedValue(makeDossier());
     vi.mocked(salaryRepo.create).mockResolvedValue({
       id: "obs-1",
       tenantId: "tenant-1",

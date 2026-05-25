@@ -34,13 +34,30 @@ import * as sourceRepo from "@server/repositories/investigatorSourceRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import { saveSource, updateSource } from "./sourceService";
 
+function makeDossier() {
+  return {
+    id: "dossier-1",
+    tenantId: "tenant-1",
+    companyName: "Acme Corp",
+    canonicalCompanyKey: "acme corp",
+    companyUrl: "https://acme.test",
+    normalizedDomain: "acme.test",
+    status: "active",
+    tags: [],
+    lastResearchedAt: null,
+    createdFromJobId: null,
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
 describe("sourceService", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   it("deduplicates an existing source without writing a new timeline event", async () => {
-    vi.mocked(dossierRepo.findById).mockResolvedValue({ id: "dossier-1" });
+    vi.mocked(dossierRepo.findById).mockResolvedValue(makeDossier());
     vi.mocked(sourceRepo.findByContentHash).mockResolvedValue({
       id: "source-1",
       tenantId: "tenant-1",
@@ -73,7 +90,7 @@ describe("sourceService", () => {
   });
 
   it("creates a source with a derived host and logs review transitions", async () => {
-    vi.mocked(dossierRepo.findById).mockResolvedValue({ id: "dossier-1" });
+    vi.mocked(dossierRepo.findById).mockResolvedValue(makeDossier());
     vi.mocked(sourceRepo.findByContentHash).mockResolvedValue(null);
     vi.mocked(sourceRepo.create).mockResolvedValue({
       id: "source-2",
