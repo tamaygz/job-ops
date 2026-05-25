@@ -28,6 +28,16 @@ function startCase(value: string): string {
     .replace(/^./, (char) => char.toUpperCase());
 }
 
+function formatProviderOutcome(item: Record<string, unknown>): string {
+  const name =
+    typeof item.name === "string" ? item.name : String(item.id ?? "");
+  const status = typeof item.status === "string" ? item.status : "";
+  const count = typeof item.resultCount === "number" ? item.resultCount : 0;
+  if (status === "success") return `${name} ✓ (${count})`;
+  if (status === "skipped") return `${name} skipped`;
+  return `${name} ✗`;
+}
+
 function formatValue(value: unknown): string {
   if (typeof value === "string") {
     return value;
@@ -36,6 +46,17 @@ function formatValue(value: unknown): string {
     return String(value);
   }
   if (Array.isArray(value)) {
+    if (
+      value.length > 0 &&
+      typeof value[0] === "object" &&
+      value[0] !== null &&
+      "providerId" in value[0] &&
+      "status" in value[0]
+    ) {
+      return value
+        .map((item) => formatProviderOutcome(item as Record<string, unknown>))
+        .join(", ");
+    }
     return value.join(", ");
   }
   return "View details";
@@ -57,7 +78,7 @@ export function formatTimelineOccurredAt(timestampSeconds: number): string {
 
 export function summarizeTimelinePayload(
   payload: Record<string, unknown>,
-  maxEntries = 3,
+  maxEntries = 4,
 ): string | null {
   const entries = Object.entries(payload).filter(([, value]) => {
     if (value === null || value === undefined) {
