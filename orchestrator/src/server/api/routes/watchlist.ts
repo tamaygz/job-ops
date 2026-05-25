@@ -8,6 +8,7 @@ import { asyncRoute, fail, ok } from "@infra/http";
 import { listCareerBoardSources } from "@server/config/career-boards";
 import * as jobsRepo from "@server/repositories/jobs";
 import * as watchlistRepo from "@server/repositories/watchlist";
+import { ensureDossiersForCompanies } from "@server/services/investigator/dossierService";
 import {
   getWatchlistSourceAdapter,
   listWatchlistSourceAdapters,
@@ -60,6 +61,7 @@ const updateWatchlistSelectionsSchema = z.object({
       }),
     )
     .max(10),
+  createDossiers: z.boolean().optional(),
 });
 
 const watchlistSourceJobSchema = z.object({
@@ -455,6 +457,14 @@ watchlistRouter.put(
         selections: normalizedSelections,
       },
     );
+
+    if (parsedBody.data.createDossiers !== false) {
+      const companies = normalizedSelections.map((selection) => ({
+        companyName: selection.label ?? selection.careersUrl,
+        companyUrl: selection.careersUrl,
+      }));
+      await ensureDossiersForCompanies(companies);
+    }
 
     ok(res, getWatchlistSourcesPayload(catalogSources, selectedSources));
   }),

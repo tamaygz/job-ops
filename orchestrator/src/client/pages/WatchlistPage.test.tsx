@@ -442,6 +442,7 @@ describe("WatchlistPage", () => {
             careersUrl: "https://autodesk.wd1.myworkdayjobs.com/Ext",
           },
         ],
+        createDossiers: true,
       });
       expect(
         screen.getByRole("button", { name: /save sources/i }),
