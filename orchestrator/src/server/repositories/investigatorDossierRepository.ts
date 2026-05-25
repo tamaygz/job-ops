@@ -14,6 +14,7 @@ const { investigatorDossiers, investigatorDossierJobs, jobs } = schema;
 
 export type DossierUpdateData = {
   companyName?: string;
+  canonicalCompanyKey?: string;
   companyUrl?: string | null;
   normalizedDomain?: string | null;
   status?: "active" | "watchlist" | "interviewing" | "archived" | "declined";
@@ -207,6 +208,9 @@ export async function update(
     updatedAt: now,
   };
   if (data.companyName !== undefined) setValues.companyName = data.companyName;
+  if (data.canonicalCompanyKey !== undefined) {
+    setValues.canonicalCompanyKey = data.canonicalCompanyKey;
+  }
   if (data.companyUrl !== undefined)
     setValues.companyUrl = data.companyUrl ?? null;
   if (data.normalizedDomain !== undefined)
