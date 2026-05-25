@@ -155,6 +155,42 @@ describe("runService", () => {
       expect(mocks.scheduleResearchRunWorker).toHaveBeenCalledOnce();
     });
 
+    it("trims and persists a non-empty research question in seedContext", async () => {
+      const mockRun = makeRun();
+      mocks.findDossierById.mockResolvedValue({ id: DOSSIER_ID });
+      mocks.findActiveForDossierAndKind.mockResolvedValue(null);
+      mocks.create.mockResolvedValue(mockRun);
+
+      await startRun(DOSSIER_ID, {
+        runKind: "company_brief",
+        researchQuestion: "   What should I prepare for?   ",
+      });
+
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          seedContext: { researchQuestion: "What should I prepare for?" },
+        }),
+      );
+    });
+
+    it("does not persist whitespace-only research question in seedContext", async () => {
+      const mockRun = makeRun();
+      mocks.findDossierById.mockResolvedValue({ id: DOSSIER_ID });
+      mocks.findActiveForDossierAndKind.mockResolvedValue(null);
+      mocks.create.mockResolvedValue(mockRun);
+
+      await startRun(DOSSIER_ID, {
+        runKind: "company_brief",
+        researchQuestion: "   ",
+      });
+
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          seedContext: null,
+        }),
+      );
+    });
+
     it("cancels a newly created run and throws CONFLICT when enqueue is deduplicated", async () => {
       const mockRun = makeRun();
       mocks.findDossierById.mockResolvedValue({ id: DOSSIER_ID });

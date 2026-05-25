@@ -21,6 +21,7 @@ export type InvestigatorGatherContext = {
   runKind: RunKind;
   dossier: InvestigatorDossier;
   seedContext: Record<string, unknown> | null;
+  researchQuestion: string | null;
   settings: InvestigatorGatherSettings;
   log: Logger;
   reportProgress: (event: RunProgressEvent) => void;

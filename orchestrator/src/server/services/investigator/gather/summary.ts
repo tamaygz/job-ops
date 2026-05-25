@@ -23,6 +23,7 @@ export async function runSummaryPhase(
       context.dossierId,
       summaryType,
       context.runId,
+      context.researchQuestion,
     );
     createdCount += 1;
 

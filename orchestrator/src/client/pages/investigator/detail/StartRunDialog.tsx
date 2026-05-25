@@ -2,9 +2,10 @@ import { investigatorRunKindLabels } from "@client/components/investigator/runMe
 import { useStartRun } from "@client/hooks/queries/useInvestigatorMutations";
 import { showErrorToast } from "@client/lib/error-toast";
 import type { StartInvestigatorRunInput } from "@shared/types";
+import { RESEARCH_QUESTION_TEMPLATES } from "@shared/types";
 import { Loader2, Play } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface StartRunDialogProps {
   dossierId: string;
@@ -31,19 +33,43 @@ interface StartRunDialogProps {
   onClose: () => void;
 }
 
+const RUN_KIND_TO_TEMPLATE_SCOPE: Record<
+  StartInvestigatorRunInput["runKind"],
+  "company" | "people" | null
+> = {
+  company_brief: "company",
+  people_scan: "people",
+  dossier_refresh: null,
+};
+
 export const StartRunDialog: React.FC<StartRunDialogProps> = ({
   dossierId,
   open,
   onClose,
 }) => {
-  const [runKind, setRunKind] = useState<string>("company_brief");
+  const [runKind, setRunKind] =
+    useState<StartInvestigatorRunInput["runKind"]>("company_brief");
+  const [researchQuestion, setResearchQuestion] = useState("");
   const mutation = useStartRun();
   const navigate = useNavigate();
 
+  const templateScope = RUN_KIND_TO_TEMPLATE_SCOPE[runKind] ?? null;
+  const filteredTemplates = useMemo(
+    () =>
+      templateScope
+        ? RESEARCH_QUESTION_TEMPLATES.filter(
+            (t) => t.scope === templateScope || t.scope === "both",
+          )
+        : RESEARCH_QUESTION_TEMPLATES,
+    [templateScope],
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedQuestion = researchQuestion.trim();
     const input: StartInvestigatorRunInput = {
-      runKind: runKind as StartInvestigatorRunInput["runKind"],
+      runKind,
+      ...(trimmedQuestion ? { researchQuestion: trimmedQuestion } : {}),
     };
     try {
       const run = await mutation.mutateAsync({ dossierId, input });
@@ -62,7 +88,7 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Start Research</DialogTitle>
           <DialogDescription>
@@ -73,7 +99,12 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="run-kind">Research type</Label>
-              <Select value={runKind} onValueChange={setRunKind}>
+              <Select
+                value={runKind}
+                onValueChange={(value) =>
+                  setRunKind(value as StartInvestigatorRunInput["runKind"])
+                }
+              >
                 <SelectTrigger id="run-kind">
                   <SelectValue />
                 </SelectTrigger>
@@ -87,6 +118,37 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
                   )}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="research-question">
+                Driving question{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <div className="flex flex-wrap gap-1.5 pb-1">
+                {filteredTemplates.map((template) => (
+                  <Button
+                    key={template.id}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-auto px-2 py-1 text-xs"
+                    onClick={() => setResearchQuestion(template.question)}
+                  >
+                    {template.label}
+                  </Button>
+                ))}
+              </div>
+              <Textarea
+                id="research-question"
+                placeholder="e.g. What should I focus on to prepare for this interview?"
+                value={researchQuestion}
+                onChange={(e) => setResearchQuestion(e.target.value)}
+                rows={2}
+                maxLength={500}
+                className="resize-none text-sm"
+              />
             </div>
           </div>
         </form>
