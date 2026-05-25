@@ -19,6 +19,7 @@ import { OnboardingGate } from "./components/OnboardingGate";
 import { useAnalyticsIdentity } from "./hooks/useAnalyticsIdentity";
 import { useDemoInfo } from "./hooks/useDemoInfo";
 import { setAuthNavigator } from "./lib/auth-navigation";
+import { ComparePage } from "./pages/ComparePage";
 import { DesignResumePage } from "./pages/DesignResumePage";
 import { GmailOauthCallbackPage } from "./pages/GmailOauthCallbackPage";
 import { HomePage } from "./pages/HomePage";
@@ -28,11 +29,12 @@ import {
   InvestigatorListPage,
 } from "./pages/investigator";
 import { JobPage } from "./pages/JobPage";
+import { O365OauthCallbackPage } from "./pages/O365OauthCallbackPage";
 import { OfflinePage } from "./pages/OfflinePage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OrchestratorPage } from "./pages/OrchestratorPage";
-import { SettingsPage } from "./pages/SettingsPage";
 import { SignInPage } from "./pages/SignInPage";
+import { SettingsPage } from "./pages/settings";
 import { TracerLinksPage } from "./pages/TracerLinksPage";
 import { TrackingInboxPage } from "./pages/TrackingInboxPage";
 import { VisaSponsorsPage } from "./pages/VisaSponsorsPage";
@@ -182,6 +184,10 @@ export const App: React.FC = () => {
                   path="/oauth/gmail/callback"
                   element={<GmailOauthCallbackPage />}
                 />
+                <Route
+                  path="/oauth/o365/callback"
+                  element={<O365OauthCallbackPage />}
+                />
                 <Route path="/job/:id" element={<JobPage />} />
                 <Route path="/job/:id/:view" element={<JobPage />} />
                 <Route
@@ -193,6 +199,7 @@ export const App: React.FC = () => {
                   path="/design-resume/:section"
                   element={<DesignResumePage />}
                 />
+                <Route path="/compare" element={<ComparePage />} />
                 <Route path="/onboarding" element={<OnboardingPage />} />
                 <Route path="/offline" element={<OfflinePage />} />
                 <Route path="/sign-in" element={<SignInPage />} />
