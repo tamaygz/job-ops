@@ -1,18 +1,9 @@
 import * as sourceService from "@server/services/investigator/sourceService";
+import { runWebSearch } from "@server/services/web-search/service";
 import type { InvestigatorProvider } from "../types";
 import { truncateText } from "../utils/text";
 
 const MAX_EXCERPT_CHARS = 1200;
-
-type BingResult = {
-  name?: string;
-  url?: string;
-  snippet?: string;
-};
-
-type BingResponse = {
-  webPages?: { value?: BingResult[] };
-};
 
 function inferSourceType(url: string | null):
   | "news_article"
@@ -41,65 +32,39 @@ function buildQuery(companyName: string, companyUrl: string | null): string {
   }
 }
 
-export const bingSearchProvider: InvestigatorProvider = {
-  id: "bing_search",
-  displayName: "Bing web search",
+export const webSearchProvider: InvestigatorProvider = {
+  id: "web_search",
+  displayName: "Web search",
   phase: "sources",
-  requiredSettings: ["bingSearchApiKey"],
   async run(context) {
-    const apiKey = context.settings.bingSearchApiKey;
-    if (!apiKey) {
-      return { status: "skipped", message: "Missing Bing API key" };
-    }
-
     const query = buildQuery(
       context.dossier.companyName,
       context.dossier.companyUrl,
     );
 
-    const url = new URL(context.settings.bingSearchEndpoint);
-    url.searchParams.set("q", query);
-    url.searchParams.set(
-      "count",
-      String(context.settings.bingSearchResultLimit),
-    );
-    url.searchParams.set("mkt", context.settings.bingSearchMarket);
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        "Ocp-Apim-Subscription-Key": apiKey,
-      },
-    });
-
-    if (!response.ok) {
+    const search = await runWebSearch(query);
+    if (search.providersAttempted === 0) {
       return {
-        status: "failed",
-        message: `Bing search failed (${response.status})`,
+        status: "skipped",
+        message: search.skipped[0] ?? "No web search providers configured",
       };
-    }
-
-    const data = (await response.json()) as BingResponse;
-    const results = data.webPages?.value ?? [];
-
-    if (results.length === 0) {
-      return { status: "success", createdCount: 0, message: "No results" };
     }
 
     let created = 0;
 
-    for (const result of results) {
-      const title = result.name?.trim();
+    for (const result of search.results) {
+      const title = result.title?.trim();
       const snippet = result.snippet?.trim();
-      const link = result.url?.trim();
+      const link = result.url?.trim() || null;
       if (!title || !snippet) continue;
 
       const excerpt = truncateText(snippet, MAX_EXCERPT_CHARS);
 
       const saved = await sourceService.saveSource(context.dossierId, {
         runId: context.runId,
-        sourceType: inferSourceType(link ?? null),
+        sourceType: inferSourceType(link),
         title,
-        url: link ?? null,
+        url: link,
         capturedExcerpt: excerpt,
         retrievedAt: Math.floor(Date.now() / 1000),
       });
@@ -107,10 +72,22 @@ export const bingSearchProvider: InvestigatorProvider = {
       if (!saved.deduplicated) created += 1;
     }
 
+    const warnings = [...search.failures, ...search.skipped];
+    const messageParts: string[] = [];
+    if (created === 0) {
+      messageParts.push("No search results");
+    } else {
+      messageParts.push(`Saved ${created} search results`);
+    }
+    if (search.failures.length > 0) {
+      messageParts.push(`${search.failures.length} provider error(s)`);
+    }
+
     return {
       status: "success",
       createdCount: created,
-      message: `Saved ${created} search results`,
+      message: messageParts.join(" | "),
+      warnings: warnings.length ? warnings : undefined,
     };
   },
 };

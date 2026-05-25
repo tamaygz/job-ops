@@ -77,7 +77,7 @@ function normalizeBaseUrl(value: string | null | undefined): string | null {
   return trimmed.replace(/\/+$/, "");
 }
 
-function isLocalOrPrivateHostname(hostnameRaw: string): boolean {
+export function isLocalOrPrivateHostname(hostnameRaw: string): boolean {
   const hostname = hostnameRaw.trim().toLowerCase();
   if (!hostname) return true;
 

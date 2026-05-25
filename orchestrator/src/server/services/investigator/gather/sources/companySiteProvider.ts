@@ -1,9 +1,8 @@
 import * as sourceService from "@server/services/investigator/sourceService";
+import { buildCompanySiteCandidateUrls } from "@server/services/investigator/urlUtils";
+import { isLocalOrPrivateHostname } from "@server/services/tracer-links";
 import type { InvestigatorProvider } from "../types";
-import {
-  fetchPageText,
-  isBlockedHost,
-} from "../utils/html";
+import { fetchPageText, isBlockedHost } from "../utils/html";
 import { truncateText } from "../utils/text";
 
 const MAX_EXCERPT_CHARS = 8000;
@@ -20,16 +19,16 @@ const PATHS = [
   "/contact",
 ] as const;
 
-function buildCandidateUrls(baseUrl: string): string[] {
-  const base = new URL(baseUrl);
-  const urls = new Set<string>();
-
-  for (const path of PATHS) {
-    const next = new URL(path, base).toString();
-    urls.add(next);
+function isPublicHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+    return !isLocalOrPrivateHostname(parsed.hostname);
+  } catch {
+    return false;
   }
-
-  return Array.from(urls);
 }
 
 export const companySiteProvider: InvestigatorProvider = {
@@ -42,15 +41,29 @@ export const companySiteProvider: InvestigatorProvider = {
       return { status: "skipped", message: "No company URL" };
     }
 
+    if (!isPublicHttpUrl(companyUrl)) {
+      return {
+        status: "skipped",
+        message: "Company URL is not a public HTTP(S) URL",
+      };
+    }
+
     if (isBlockedHost(companyUrl)) {
       return { status: "skipped", message: "Company URL blocked" };
     }
 
-    const candidates = buildCandidateUrls(companyUrl);
+    const candidates = buildCompanySiteCandidateUrls(companyUrl, PATHS);
+    if (candidates.length === 0) {
+      return {
+        status: "skipped",
+        message: "Company URL is not a valid HTTP(S) URL",
+      };
+    }
+
     let created = 0;
 
     for (const url of candidates) {
-      if (isBlockedHost(url)) continue;
+      if (!isPublicHttpUrl(url) || isBlockedHost(url)) continue;
 
       const content = await fetchPageText(url).catch(() => null);
       if (!content || content.text.length < MIN_TEXT_CHARS) continue;

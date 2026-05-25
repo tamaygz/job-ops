@@ -240,7 +240,7 @@ export const TrackingInboxPage: React.FC = () => {
 
   const waitForOauthResult = useCallback(
     (
-      providerKey: PostApplicationProvider,
+      providerKey: OauthCapableProvider,
       expectedState: string,
       popup: Window,
     ): Promise<{ code?: string; error?: string }> => {

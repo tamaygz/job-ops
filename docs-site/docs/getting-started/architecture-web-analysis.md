@@ -1,8 +1,6 @@
-
 ---
-
-## Architecture Analysis: Web Search / Scrape / Crawl / Fetch in `job-ops`
-
+id: architecture-web-analysis
+title: Architecture Analysis: Web Search / Scrape / Crawl / Fetch in `job-ops`
 ---
 
 ### 1. Monorepo Layout & Primary Runtime

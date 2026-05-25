@@ -14,6 +14,8 @@ import {
   type LlmProviderId,
   type LlmPurposeApiKeys,
   type LlmPurposeOverrides,
+  WEB_SEARCH_PROVIDER_VALUES,
+  type WebSearchProviderId,
   PDF_RENDERER_VALUES,
   type PdfRenderer,
   type ResumeProjectsSettings,
@@ -88,7 +90,7 @@ export const DEFAULT_INVESTIGATOR_SUMMARY_SYSTEM_PROMPT =
 export const DEFAULT_INVESTIGATOR_SOURCE_PROVIDERS = [
   "linked_jobs",
   "company_site",
-  "bing_search",
+  "web_search",
 ];
 export const DEFAULT_INVESTIGATOR_PEOPLE_PROVIDERS = ["source_text"];
 export const DEFAULT_INVESTIGATOR_SALARY_PROVIDERS = [
@@ -99,6 +101,12 @@ export const DEFAULT_INVESTIGATOR_BING_SEARCH_ENDPOINT =
   "https://api.bing.microsoft.com/v7.0/search";
 export const DEFAULT_INVESTIGATOR_BING_SEARCH_MARKET = "en-US";
 export const DEFAULT_INVESTIGATOR_BING_SEARCH_RESULT_LIMIT = 8;
+export const DEFAULT_WEB_SEARCH_PROVIDERS: WebSearchProviderId[] = ["bing"];
+export const DEFAULT_WEB_SEARCH_RESULT_LIMIT = 8;
+export const DEFAULT_WEB_SEARCH_MARKET = "en-US";
+export const DEFAULT_WEB_SEARCH_BING_ENDPOINT =
+  "https://api.bing.microsoft.com/v7.0/search";
+export const DEFAULT_WEB_SEARCH_SEARXNG_BASE_URL = "";
 
 export function getDefaultModelForProvider(
   provider: string | null | undefined,
@@ -195,6 +203,28 @@ const parseChatStyleManualLanguageOrNull = createEnumParser(
 );
 const parsePdfRendererOrNull = createEnumParser(PDF_RENDERER_VALUES);
 const parseTypstThemeOrNull = createEnumParser(TYPST_THEME_VALUES);
+function parseWebSearchProvidersOrNull(
+  raw: string | undefined,
+): WebSearchProviderId[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+
+    const allowed = new Set<string>(WEB_SEARCH_PROVIDER_VALUES);
+    const out: WebSearchProviderId[] = [];
+    const seen = new Set<string>();
+    for (const value of parsed) {
+      if (typeof value !== "string" || !allowed.has(value)) return null;
+      if (seen.has(value)) continue;
+      seen.add(value);
+      out.push(value as WebSearchProviderId);
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
 
 const llmPurposeOverrideSchema = z.object({
   provider: z.preprocess(
@@ -740,6 +770,48 @@ export const settingsRegistry = {
     },
     serialize: serializeNullableNumber,
   },
+  webSearchProviders: {
+    kind: "typed" as const,
+    schema: z.array(z.enum(WEB_SEARCH_PROVIDER_VALUES)),
+    default: (): WebSearchProviderId[] => DEFAULT_WEB_SEARCH_PROVIDERS,
+    parse: parseWebSearchProvidersOrNull,
+    serialize: serializeNullableJsonArray,
+  },
+  webSearchResultLimit: {
+    kind: "typed" as const,
+    schema: z.number().int().min(1).max(25),
+    default: (): number => DEFAULT_WEB_SEARCH_RESULT_LIMIT,
+    parse: (raw: string | undefined): number | null => {
+      const parsed = raw ? parseInt(raw, 10) : NaN;
+      if (Number.isNaN(parsed)) return null;
+      return Math.min(25, Math.max(1, parsed));
+    },
+    serialize: serializeNullableNumber,
+  },
+  webSearchMarket: {
+    kind: "typed" as const,
+    schema: z.string().trim().max(20),
+    default: (): string => DEFAULT_WEB_SEARCH_MARKET,
+    parse: parseNonEmptyStringOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
+  webSearchBingEndpoint: {
+    kind: "typed" as const,
+    schema: z.string().trim().url().max(2000),
+    default: (): string => DEFAULT_WEB_SEARCH_BING_ENDPOINT,
+    parse: parseNonEmptyStringOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
+  webSearchSearxngBaseUrl: {
+    kind: "typed" as const,
+    schema: z.string().trim().url().max(2000),
+    default: (): string => DEFAULT_WEB_SEARCH_SEARXNG_BASE_URL,
+    parse: parseNonEmptyStringOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
   searchCities: {
     kind: "typed" as const,
     schema: z.string().trim().max(100),
@@ -1033,6 +1105,21 @@ export const settingsRegistry = {
   apifyToken: {
     kind: "secret" as const,
     envKey: "APIFY_TOKEN",
+    schema: z.string().trim().max(2000),
+  },
+  webSearchBingApiKey: {
+    kind: "secret" as const,
+    envKey: "WEB_SEARCH_BING_API_KEY",
+    schema: z.string().trim().max(2000),
+  },
+  webSearchSearxngApiKey: {
+    kind: "secret" as const,
+    envKey: "SEARXNG_API_KEY",
+    schema: z.string().trim().max(2000),
+  },
+  webSearchBraveApiKey: {
+    kind: "secret" as const,
+    envKey: "BRAVE_SEARCH_API_KEY",
     schema: z.string().trim().max(2000),
   },
   webhookSecret: {

@@ -47,7 +47,10 @@ export function truncateText(value: string, maxChars: number): string {
 }
 
 export function normalizeWhitespace(value: string): string {
-  return value.replace(/[\t ]+/g, " ").replace(/\s+\n/g, "\n").trim();
+  return value
+    .replace(/[\t ]+/g, " ")
+    .replace(/\s+\n/g, "\n")
+    .trim();
 }
 
 export function extractPeopleCandidates(text: string): PersonCandidate[] {
@@ -114,11 +117,19 @@ export function inferPersonType(title: string): PersonType {
 export function extractSalaryRanges(text: string): SalaryRange[] {
   const ranges: SalaryRange[] = [];
   const normalized = text.replace(/\s+/g, " ");
+  const matchedRangeSpans: Array<{ start: number; end: number }> = [];
 
   const rangeRegex =
-    /(\$|USD|GBP|EUR)\s*(\d{2,3}(?:[\,\d]{0,6})|\d{2,6})(?:\s*[kK])?\s*(?:-|to|–|—)\s*(\$|USD|GBP|EUR)?\s*(\d{2,3}(?:[\,\d]{0,6})|\d{2,6})(?:\s*[kK])?/g;
+    /(\$|USD|GBP|EUR)\s*(\d{2,3}(?:[,\d]{0,6})|\d{2,6})(?:\s*[kK])?\s*(?:-|to|–|—)\s*(\$|USD|GBP|EUR)?\s*(\d{2,3}(?:[,\d]{0,6})|\d{2,6})(?:\s*[kK])?/g;
 
   for (const match of normalized.matchAll(rangeRegex)) {
+    if (typeof match.index === "number") {
+      matchedRangeSpans.push({
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
+
     const currency = normalizeCurrency(match[1] || match[3]);
     const minAmount = parseMoney(match[2], match[0]);
     const maxAmount = parseMoney(match[4], match[0]);
@@ -131,9 +142,19 @@ export function extractSalaryRanges(text: string): SalaryRange[] {
   }
 
   const singleRegex =
-    /(\$|USD|GBP|EUR)\s*(\d{2,3}(?:[\,\d]{0,6})|\d{2,6})(?:\s*[kK])?\s*(per year|yearly|annum|per hour|hourly|per month|monthly)?/g;
+    /(\$|USD|GBP|EUR)\s*(\d{2,3}(?:[,\d]{0,6})|\d{2,6})(?:\s*[kK])?\s*(per year|yearly|annum|per hour|hourly|per month|monthly)?/g;
 
   for (const match of normalized.matchAll(singleRegex)) {
+    if (
+      typeof match.index === "number" &&
+      matchedRangeSpans.some(
+        (span) =>
+          match.index < span.end && match.index + match[0].length > span.start,
+      )
+    ) {
+      continue;
+    }
+
     const currency = normalizeCurrency(match[1]);
     const amount = parseMoney(match[2], match[0]);
     ranges.push({
