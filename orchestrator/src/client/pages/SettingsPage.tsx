@@ -117,6 +117,14 @@ const DEFAULT_FORM_VALUES: UpdateSettingsInput = {
   investigatorSummarySystemPromptTemplate: "",
   investigatorSummarySourceLimit: null,
   investigatorSummaryExcerptMaxChars: null,
+  webSearchProviders: [],
+  webSearchResultLimit: null,
+  webSearchMarket: "",
+  webSearchBingEndpoint: "",
+  webSearchSearxngBaseUrl: "",
+  webSearchBingApiKey: "",
+  webSearchSearxngApiKey: "",
+  webSearchBraveApiKey: "",
 };
 
 type LlmProviderValue = LlmProviderId | null;
@@ -235,6 +243,12 @@ const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
         searchTerms: ["rxresume", "resume", "projects", "template"],
       },
       {
+        id: "web-search",
+        label: "Web Search",
+        description: "Search providers, credentials, and result tuning.",
+        searchTerms: ["bing", "searxng", "brave", "search", "web"],
+      },
+      {
         id: "webhooks",
         label: "Webhooks",
         description: "Pipeline and job completion event destinations.",
@@ -345,6 +359,16 @@ const SECTION_FIELD_MAP: Record<
     "rxresumeApiKey",
     "rxresumeUrl",
     "resumeProjects",
+  ],
+  "web-search": [
+    "webSearchProviders",
+    "webSearchResultLimit",
+    "webSearchMarket",
+    "webSearchBingEndpoint",
+    "webSearchSearxngBaseUrl",
+    "webSearchBingApiKey",
+    "webSearchSearxngApiKey",
+    "webSearchBraveApiKey",
   ],
   webhooks: ["pipelineWebhookUrl", "jobCompleteWebhookUrl", "webhookSecret"],
   "tracer-links": [],
@@ -459,6 +483,14 @@ const NULL_SETTINGS_PAYLOAD: UpdateSettingsInput = {
   investigatorSummarySystemPromptTemplate: null,
   investigatorSummarySourceLimit: null,
   investigatorSummaryExcerptMaxChars: null,
+  webSearchProviders: null,
+  webSearchResultLimit: null,
+  webSearchMarket: null,
+  webSearchBingEndpoint: null,
+  webSearchSearxngBaseUrl: null,
+  webSearchBingApiKey: null,
+  webSearchSearxngApiKey: null,
+  webSearchBraveApiKey: null,
 };
 
 const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
