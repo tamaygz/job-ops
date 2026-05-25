@@ -8,17 +8,26 @@ import { startServer, stopServer } from "./test-utils";
 const routesDir = dirname(fileURLToPath(import.meta.url));
 
 async function getRouteSourceFiles(): Promise<string[]> {
-  const entries = await readdir(routesDir, { withFileTypes: true });
-  return entries
-    .filter(
-      (entry) =>
+  const files: string[] = [];
+
+  async function collect(dir: string): Promise<void> {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        await collect(join(dir, entry.name));
+      } else if (
         entry.isFile() &&
         entry.name.endsWith(".ts") &&
         !entry.name.endsWith(".test.ts") &&
-        entry.name !== "test-utils.ts",
-    )
-    .map((entry) => join(routesDir, entry.name))
-    .sort();
+        entry.name !== "test-utils.ts"
+      ) {
+        files.push(join(dir, entry.name));
+      }
+    }
+  }
+
+  await collect(routesDir);
+  return files.sort();
 }
 
 describe("API contract guardrails", () => {

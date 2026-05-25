@@ -9,6 +9,7 @@ const sidebars: SidebarsConfig = {
       items: [
         "getting-started/self-hosting",
         "getting-started/gmail-oauth-setup",
+        "getting-started/imap-setup",
       ],
     },
     {
@@ -39,6 +40,7 @@ const sidebars: SidebarsConfig = {
         "features/visa-sponsors",
         "features/tracer-links",
         "features/watchlist",
+        "features/investigator",
       ],
     },
     {
@@ -65,6 +67,7 @@ const sidebars: SidebarsConfig = {
       items: [
         "getting-started/self-hosting",
         "getting-started/gmail-oauth-setup",
+        "getting-started/imap-setup",
         "getting-started/database-backups",
         "troubleshooting/common-problems",
       ],

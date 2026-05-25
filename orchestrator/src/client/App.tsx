@@ -23,6 +23,10 @@ import { DesignResumePage } from "./pages/DesignResumePage";
 import { GmailOauthCallbackPage } from "./pages/GmailOauthCallbackPage";
 import { HomePage } from "./pages/HomePage";
 import { InProgressBoardPage } from "./pages/InProgressBoardPage";
+import {
+  InvestigatorDetailPage,
+  InvestigatorListPage,
+} from "./pages/investigator";
 import { JobPage } from "./pages/JobPage";
 import { OfflinePage } from "./pages/OfflinePage";
 import { OnboardingPage } from "./pages/OnboardingPage";
@@ -197,6 +201,14 @@ export const App: React.FC = () => {
                 <Route path="/visa-sponsors" element={<VisaSponsorsPage />} />
                 <Route path="/tracking-inbox" element={<TrackingInboxPage />} />
                 <Route path="/watchlist" element={<WatchlistPage />} />
+                <Route
+                  path="/investigator"
+                  element={<InvestigatorListPage />}
+                />
+                <Route
+                  path="/investigator/:dossierId"
+                  element={<InvestigatorDetailPage />}
+                />
                 <Route path="/jobs/:tab" element={<OrchestratorPage />} />
                 <Route
                   path="/jobs/:tab/:jobId"
