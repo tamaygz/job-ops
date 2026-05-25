@@ -61,4 +61,15 @@ describe("timelineService", () => {
       code: "NOT_FOUND",
     });
   });
+
+  it("forwards run-scoped filters when listing events", async () => {
+    vi.mocked(dossierRepo.findById).mockResolvedValue(makeDossier());
+    vi.mocked(timelineRepo.findByDossier).mockResolvedValue([]);
+
+    await listEvents("dossier-1", { runId: "run-1" });
+
+    expect(timelineRepo.findByDossier).toHaveBeenCalledWith("dossier-1", {
+      runId: "run-1",
+    });
+  });
 });
