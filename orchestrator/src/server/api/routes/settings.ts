@@ -7,8 +7,13 @@ import {
   upstreamError,
 } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
-import { logger } from "@infra/logger";
+import {
+  listBufferedLogStreamEntries,
+  logger,
+  subscribeToLogStream,
+} from "@infra/logger";
 import { getRequestId } from "@infra/request-context";
+import { setupSse, startSseHeartbeat, writeSseData } from "@infra/sse";
 import { isDemoMode, sendDemoBlocked } from "@server/config/demo";
 import { getSetting } from "@server/repositories/settings";
 import { enqueueAutoPdfRegenerationForSettingsChanges } from "@server/services/auto-pdf-regeneration";
@@ -43,6 +48,7 @@ import {
 } from "@shared/settings-schema";
 import { LLM_PURPOSE_VALUES, type LlmPurpose } from "@shared/types";
 import { type Request, type Response, Router } from "express";
+import { getActiveTenantId } from "@server/tenancy/context";
 
 export const settingsRouter = Router();
 
@@ -281,6 +287,48 @@ settingsRouter.get(
   asyncRoute(async (_req: Request, res: Response) => {
     const data = await getEffectiveSettings();
     ok(res, data);
+  }),
+);
+
+settingsRouter.get(
+  "/logs/stream",
+  asyncRoute(async (req: Request, res: Response) => {
+    const tenantId = getActiveTenantId();
+    setupSse(res, {
+      disableBuffering: true,
+      flushHeaders: true,
+    });
+
+    writeSseData(res, {
+      type: "snapshot",
+      entries: listBufferedLogStreamEntries({
+        tenantId,
+        limit: 200,
+      }),
+    });
+
+    const stopHeartbeat = startSseHeartbeat(res);
+    const unsubscribe = subscribeToLogStream(
+      (entry) => {
+        if (res.writableEnded || res.destroyed) return;
+        writeSseData(res, {
+          type: "log",
+          entry,
+        });
+      },
+      { tenantId },
+    );
+
+    let cleanedUp = false;
+    const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      unsubscribe();
+      stopHeartbeat();
+    };
+
+    req.on("close", cleanup);
+    res.on("close", cleanup);
   }),
 );
 

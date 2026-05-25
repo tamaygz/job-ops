@@ -3,6 +3,22 @@ import { sanitizeError, sanitizeUnknown } from "./sanitize";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
+export type LogStreamEntry = {
+  id: number;
+  ts: string;
+  level: LogLevel;
+  line: string;
+  tenantId: string | null;
+};
+
+type LogStreamSubscriber = (entry: LogStreamEntry) => void;
+
+const MAX_LOG_STREAM_ENTRIES = 400;
+const logStreamEntries: LogStreamEntry[] = [];
+const logStreamSubscribers = new Set<LogStreamSubscriber>();
+
+let nextLogStreamEntryId = 1;
+
 const levelPriority: Record<LogLevel, number> = {
   debug: 10,
   info: 20,
@@ -19,6 +35,73 @@ function resolveMinLevel(): LogLevel {
 }
 
 const minLevel = resolveMinLevel();
+
+function normalizeTenantId(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function buildLogStreamEntry(
+  payload: Record<string, unknown>,
+  line: string,
+  level: LogLevel,
+): LogStreamEntry {
+  return {
+    id: nextLogStreamEntryId++,
+    ts: typeof payload.ts === "string" ? payload.ts : new Date().toISOString(),
+    level,
+    line,
+    tenantId: normalizeTenantId(payload.tenantId),
+  };
+}
+
+function shouldIncludeLogStreamEntry(
+  entry: LogStreamEntry,
+  tenantId?: string,
+): boolean {
+  if (!tenantId) return true;
+  return entry.tenantId === null || entry.tenantId === tenantId;
+}
+
+function publishLogStreamEntry(entry: LogStreamEntry): void {
+  logStreamEntries.push(entry);
+  if (logStreamEntries.length > MAX_LOG_STREAM_ENTRIES) {
+    logStreamEntries.splice(0, logStreamEntries.length - MAX_LOG_STREAM_ENTRIES);
+  }
+
+  for (const subscriber of logStreamSubscribers) {
+    subscriber(entry);
+  }
+}
+
+export function listBufferedLogStreamEntries(input?: {
+  tenantId?: string;
+  limit?: number;
+}): LogStreamEntry[] {
+  const filtered = logStreamEntries.filter((entry) =>
+    shouldIncludeLogStreamEntry(entry, input?.tenantId),
+  );
+
+  if (input?.limit && filtered.length > input.limit) {
+    return filtered.slice(-input.limit);
+  }
+
+  return filtered.slice();
+}
+
+export function subscribeToLogStream(
+  listener: (entry: LogStreamEntry) => void,
+  input?: { tenantId?: string },
+): () => void {
+  const subscriber: LogStreamSubscriber = (entry) => {
+    if (!shouldIncludeLogStreamEntry(entry, input?.tenantId)) return;
+    listener(entry);
+  };
+
+  logStreamSubscribers.add(subscriber);
+  return () => {
+    logStreamSubscribers.delete(subscriber);
+  };
+}
 
 export class Logger {
   constructor(private readonly context: Record<string, unknown> = {}) {}
@@ -68,6 +151,8 @@ export class Logger {
     } else {
       console.log(line);
     }
+
+    publishLogStreamEntry(buildLogStreamEntry(payload, line, level));
   }
 }
 
