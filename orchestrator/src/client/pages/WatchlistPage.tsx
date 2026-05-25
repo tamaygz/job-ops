@@ -101,6 +101,7 @@ export const WatchlistPage: React.FC = () => {
   const [movingJobRef, setMovingJobRef] = useState<string | null>(null);
   const [showIgnored, setShowIgnored] = useState(false);
   const [sourceDrafts, setSourceDrafts] = useState<SourceSelectionDraft[]>([]);
+  const [createDossiers, setCreateDossiers] = useState(true);
 
   const { data: watchlistSourcesResponse } = useQuery({
     queryKey: queryKeys.watchlist.sources(),
@@ -433,7 +434,7 @@ export const WatchlistPage: React.FC = () => {
 
     const selections = draftSelectionsState.selections;
     try {
-      await saveSourcesMutation.mutateAsync({ selections });
+      await saveSourcesMutation.mutateAsync({ selections, createDossiers });
 
       const catalogCount = selections.filter(
         (selection) => selection.catalogSourceId !== null,
@@ -604,6 +605,8 @@ export const WatchlistPage: React.FC = () => {
             newJobsCount={newJobsCount}
             hasUnsavedChanges={hasUnsavedChanges}
             isSaving={saveSourcesMutation.isPending}
+            createDossiers={createDossiers}
+            onCreateDossiersChange={setCreateDossiers}
             onAddSource={addSourceDraft}
             onRemoveSource={removeSourceDraft}
             onUpdateDraft={updateDraft}

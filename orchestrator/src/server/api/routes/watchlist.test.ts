@@ -163,6 +163,62 @@ describe.sequential("Watchlist API routes", () => {
       );
     });
 
+    it("creates investigator dossiers by default when saving sources", async () => {
+      const saveRes = await fetch(`${baseUrl}/api/watchlist/sources`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selections: [
+            {
+              catalogSourceId: "autodesk-workday",
+              sourceType: "workday",
+              careersUrl: "https://autodesk.wd1.myworkdayjobs.com/Ext",
+              label: "Autodesk",
+            },
+          ],
+        }),
+      });
+      expect(saveRes.status).toBe(200);
+
+      const dossiersBody = await fetch(
+        `${baseUrl}/api/investigator/dossiers`,
+      ).then((r) => r.json());
+      expect(dossiersBody.ok).toBe(true);
+      expect(dossiersBody.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            companyName: "Autodesk",
+            status: "watchlist",
+          }),
+        ]),
+      );
+    });
+
+    it("skips dossier creation when createDossiers is false", async () => {
+      const saveRes = await fetch(`${baseUrl}/api/watchlist/sources`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selections: [
+            {
+              catalogSourceId: "autodesk-workday",
+              sourceType: "workday",
+              careersUrl: "https://autodesk.wd1.myworkdayjobs.com/Ext",
+              label: "Autodesk",
+            },
+          ],
+          createDossiers: false,
+        }),
+      });
+      expect(saveRes.status).toBe(200);
+
+      const dossiersBody = await fetch(
+        `${baseUrl}/api/investigator/dossiers`,
+      ).then((r) => r.json());
+      expect(dossiersBody.ok).toBe(true);
+      expect(dossiersBody.data).toEqual([]);
+    });
+
     it("caps oversized source-branding responses", async () => {
       vi.stubGlobal(
         "fetch",

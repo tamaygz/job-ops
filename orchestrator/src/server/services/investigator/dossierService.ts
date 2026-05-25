@@ -1,9 +1,9 @@
 import { conflict, notFound } from "@infra/errors";
 import { logger } from "@infra/logger";
+import { sanitizeError } from "@infra/sanitize";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import * as jobsRepo from "@server/repositories/jobs";
-import { extractNormalizedHostname } from "./urlUtils";
 import type {
   CreateInvestigatorDossierInput,
   InvestigatorDossier,
@@ -14,6 +14,7 @@ import type {
   LinkReason,
   UpdateInvestigatorDossierInput,
 } from "@shared/types";
+import { extractNormalizedHostname } from "./urlUtils";
 
 const log = logger.child({ service: "dossierService" });
 
@@ -227,4 +228,85 @@ export async function listLinkedJobsForDossier(
   const dossier = await dossierRepo.findById(dossierId);
   if (!dossier) throw notFound(`Dossier ${dossierId} not found`);
   return dossierRepo.listLinkedJobsWithDetails(dossierId);
+}
+
+/**
+ * Ensure a dossier exists for each company in the given list.
+ * If a dossier already exists (by canonical key), it is skipped.
+ * Concurrent creates that hit the UNIQUE constraint are treated as skips rather
+ * than errors, making this safe to call in parallel or on retry.
+ * Returns the count of newly created dossiers.
+ */
+export async function ensureDossiersForCompanies(
+  companies: Array<{
+    companyName: string;
+    companyUrl?: string | null;
+  }>,
+): Promise<{ created: number; skipped: number }> {
+  let created = 0;
+  let skipped = 0;
+
+  const uniqueByKey = new Map<
+    string,
+    { companyName: string; companyUrl?: string | null }
+  >();
+  for (const company of companies) {
+    const canonicalKey = normalizeCanonicalKey(company.companyName);
+    if (!canonicalKey) continue;
+    if (!uniqueByKey.has(canonicalKey)) {
+      uniqueByKey.set(canonicalKey, company);
+    }
+  }
+
+  for (const [canonicalKey, company] of uniqueByKey) {
+    const existing = await dossierRepo.findByCanonicalKey(canonicalKey);
+    if (existing) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      const dossier = await dossierRepo.create({
+        companyName: company.companyName,
+        canonicalCompanyKey: canonicalKey,
+        companyUrl: company.companyUrl ?? null,
+        normalizedDomain: extractDomain(company.companyUrl),
+        status: "watchlist",
+      });
+
+      created++;
+
+      try {
+        await writeTimelineEvent({
+          dossierId: dossier.id,
+          eventType: "dossier_created",
+          payload: {
+            companyName: company.companyName,
+            canonicalKey,
+            source: "watchlist",
+          },
+          occurredAt: nowSeconds(),
+        });
+      } catch (timelineErr) {
+        log.warn("Failed to write dossier_created timeline event", {
+          dossierId: dossier.id,
+          error: sanitizeError(timelineErr),
+        });
+      }
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        err.message.toLowerCase().includes("unique constraint failed")
+      ) {
+        // A concurrent save created the same dossier between our pre-check and
+        // the insert — treat this as a skip rather than failing the whole save.
+        skipped++;
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  log.info("Ensured dossiers for watchlist companies", { created, skipped });
+  return { created, skipped };
 }
