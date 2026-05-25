@@ -104,9 +104,13 @@ export function buildSummaryPrompt(
     InvestigatorSummarySettings,
     "excerptMaxChars" | "sourceLimit"
   > = DEFAULT_SUMMARY_SETTINGS,
+  researchQuestion?: string | null,
 ): string {
   const typeName = summaryType.replace(/_/g, " ");
   const header = `Generate a ${typeName} for ${companyName}${companyUrl ? ` (${companyUrl})` : ""}.`;
+  const questionSection = researchQuestion
+    ? `\n\n## Driving Research Question\n${researchQuestion}\n\nPrioritise answering this question in your analysis while still covering the general ${typeName}.`
+    : "";
   const excerpts = sources
     .slice(0, options.sourceLimit)
     .map(
@@ -115,13 +119,14 @@ export function buildSummaryPrompt(
     )
     .join("\n\n");
 
-  return `${header}\n\n## Sources\n${excerpts || "No sources available."}`;
+  return `${header}${questionSection}\n\n## Sources\n${excerpts || "No sources available."}`;
 }
 
 export async function regenerateSummary(
   dossierId: string,
   summaryType: SummaryType,
   runId?: string | null,
+  researchQuestion?: string | null,
 ): Promise<InvestigatorSummary> {
   const dossier = await dossierRepo.findById(dossierId);
   if (!dossier) throw notFound("Dossier not found");
@@ -141,6 +146,7 @@ export async function regenerateSummary(
     sources,
     summaryType,
     summarySettings,
+    researchQuestion,
   );
 
   let bodyMarkdown = "(Generation failed)";

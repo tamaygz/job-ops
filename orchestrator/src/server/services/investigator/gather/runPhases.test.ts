@@ -76,6 +76,7 @@ describe("runInvestigatorPhases", () => {
         companyName: "Acme",
       } as never,
       seedContext: null,
+      researchQuestion: null,
     });
 
     expect(result.failures).toEqual([]);
@@ -108,6 +109,7 @@ describe("runInvestigatorPhases", () => {
         companyName: "Acme",
       } as never,
       seedContext: null,
+      researchQuestion: null,
     });
 
     expect(result.failures).toEqual([
@@ -131,6 +133,7 @@ describe("runInvestigatorPhases", () => {
         companyName: "Acme",
       } as never,
       seedContext: null,
+      researchQuestion: null,
     });
 
     expect(result.failures).toEqual([]);
