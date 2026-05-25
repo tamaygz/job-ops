@@ -97,16 +97,19 @@ async function processQueuedRun(
       });
 
       try {
+        const seedCtx = run.seedContext as Record<string, unknown> | null;
+        const researchQuestion =
+          typeof seedCtx?.researchQuestion === "string"
+            ? seedCtx.researchQuestion
+            : null;
+
         const { failures } = await runInvestigatorPhases({
           runId: payload.runId,
           dossierId: payload.dossierId,
           runKind: payload.runKind,
           dossier,
           seedContext: run.seedContext,
-          researchQuestion:
-            typeof (run.seedContext as Record<string, unknown> | null)?.researchQuestion === "string"
-              ? ((run.seedContext as Record<string, unknown>).researchQuestion as string)
-              : null,
+          researchQuestion,
         });
 
         const latest = await runRepo.findById(payload.runId);
