@@ -46,7 +46,12 @@ export const companySiteProvider: InvestigatorProvider = {
       return { status: "skipped", message: "Company URL blocked" };
     }
 
-    const candidates = buildCandidateUrls(companyUrl);
+    let candidates: string[];
+    try {
+      candidates = buildCandidateUrls(companyUrl);
+    } catch {
+      return { status: "skipped", message: "Company URL is not a valid absolute URL" };
+    }
     let created = 0;
 
     for (const url of candidates) {
