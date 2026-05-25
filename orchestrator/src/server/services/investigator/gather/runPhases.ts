@@ -1,9 +1,10 @@
 import { logger } from "@infra/logger";
+import * as runRepo from "@server/repositories/investigatorRunRepository";
 import type { InvestigatorDossier, RunKind } from "@shared/types";
 import { notifyRunProgress } from "../runProgress";
-import { loadInvestigatorGatherSettings } from "./settings";
 import { runPeopleProviders } from "./people";
 import { runSalaryProviders } from "./salary";
+import { loadInvestigatorGatherSettings } from "./settings";
 import { runSourceProviders } from "./sources";
 import { runSummaryPhase } from "./summary";
 import type { InvestigatorGatherContext } from "./types";
@@ -19,6 +20,11 @@ const PHASE_PLAN: Record<RunKind, { people: boolean; salary: boolean }> = {
 export type RunPhaseResult = {
   failures: Array<{ phase: string; providers: string[] }>;
 };
+
+async function isRunCancelled(runId: string): Promise<boolean> {
+  const latest = await runRepo.findById(runId);
+  return latest?.status === "cancelled";
+}
 
 export async function runInvestigatorPhases(args: {
   runId: string;
@@ -46,6 +52,10 @@ export async function runInvestigatorPhases(args: {
 
   const failures: RunPhaseResult["failures"] = [];
 
+  if (await isRunCancelled(args.runId)) {
+    return { failures };
+  }
+
   context.reportProgress({
     runId: args.runId,
     dossierId: args.dossierId,
@@ -57,6 +67,9 @@ export async function runInvestigatorPhases(args: {
   const sources = await runSourceProviders(context);
   if (sources.failures.length > 0) {
     failures.push({ phase: "sources", providers: sources.failures });
+  }
+  if (await isRunCancelled(args.runId)) {
+    return { failures };
   }
 
   const plan = PHASE_PLAN[args.runKind];
@@ -74,6 +87,9 @@ export async function runInvestigatorPhases(args: {
     if (people.failures.length > 0) {
       failures.push({ phase: "people", providers: people.failures });
     }
+    if (await isRunCancelled(args.runId)) {
+      return { failures };
+    }
   }
 
   if (plan.salary) {
@@ -88,6 +104,9 @@ export async function runInvestigatorPhases(args: {
     const salary = await runSalaryProviders(context);
     if (salary.failures.length > 0) {
       failures.push({ phase: "salary", providers: salary.failures });
+    }
+    if (await isRunCancelled(args.runId)) {
+      return { failures };
     }
   }
 
