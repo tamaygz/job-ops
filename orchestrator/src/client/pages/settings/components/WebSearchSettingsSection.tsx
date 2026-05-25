@@ -69,7 +69,7 @@ export const WebSearchSettingsSection: React.FC<
   const { control, setValue } = useFormContext<UpdateSettingsInput>();
   const selectedProviders = normalizeProviderList(
     useWatch({ control, name: "webSearchProviders" }) ??
-      values.providers.default,
+      values.providers.effective,
   );
   const disabled = isLoading || isSaving;
 
