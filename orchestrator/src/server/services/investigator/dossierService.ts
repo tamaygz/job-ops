@@ -3,7 +3,6 @@ import { logger } from "@infra/logger";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import * as jobsRepo from "@server/repositories/jobs";
-import { extractNormalizedHostname } from "./urlUtils";
 import type {
   CreateInvestigatorDossierInput,
   InvestigatorDossier,
@@ -14,6 +13,7 @@ import type {
   LinkReason,
   UpdateInvestigatorDossierInput,
 } from "@shared/types";
+import { extractNormalizedHostname } from "./urlUtils";
 
 const log = logger.child({ service: "dossierService" });
 
@@ -243,20 +243,26 @@ export async function ensureDossiersForCompanies(
   let created = 0;
   let skipped = 0;
 
+  const uniqueByKey = new Map<
+    string,
+    { companyName: string; companyUrl?: string | null }
+  >();
   for (const company of companies) {
     const canonicalKey = normalizeCanonicalKey(company.companyName);
-    if (!canonicalKey) {
-      skipped++;
-      continue;
+    if (!canonicalKey) continue;
+    if (!uniqueByKey.has(canonicalKey)) {
+      uniqueByKey.set(canonicalKey, company);
     }
+  }
 
+  for (const [canonicalKey, company] of uniqueByKey) {
     const existing = await dossierRepo.findByCanonicalKey(canonicalKey);
     if (existing) {
       skipped++;
       continue;
     }
 
-    await dossierRepo.create({
+    const dossier = await dossierRepo.create({
       companyName: company.companyName,
       canonicalCompanyKey: canonicalKey,
       companyUrl: company.companyUrl ?? null,
@@ -264,19 +270,16 @@ export async function ensureDossiersForCompanies(
       status: "watchlist",
     });
 
-    const dossier = await dossierRepo.findByCanonicalKey(canonicalKey);
-    if (dossier) {
-      await writeTimelineEvent({
-        dossierId: dossier.id,
-        eventType: "dossier_created",
-        payload: {
-          companyName: company.companyName,
-          canonicalKey,
-          source: "watchlist",
-        },
-        occurredAt: nowSeconds(),
-      });
-    }
+    await writeTimelineEvent({
+      dossierId: dossier.id,
+      eventType: "dossier_created",
+      payload: {
+        companyName: company.companyName,
+        canonicalKey,
+        source: "watchlist",
+      },
+      occurredAt: nowSeconds(),
+    });
 
     created++;
   }
