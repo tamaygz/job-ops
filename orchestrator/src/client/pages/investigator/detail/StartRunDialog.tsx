@@ -1,16 +1,17 @@
-import {
-  investigatorRunKindLabels,
-} from "@client/components/investigator/runMetadata";
+import { investigatorRunKindLabels } from "@client/components/investigator/runMetadata";
 import { useStartRun } from "@client/hooks/queries/useInvestigatorMutations";
 import { showErrorToast } from "@client/lib/error-toast";
 import type { StartInvestigatorRunInput } from "@shared/types";
 import { Loader2, Play } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -37,6 +38,7 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
 }) => {
   const [runKind, setRunKind] = useState<string>("company_brief");
   const mutation = useStartRun();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +46,14 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
       runKind: runKind as StartInvestigatorRunInput["runKind"],
     };
     try {
-      await mutation.mutateAsync({ dossierId, input });
+      const run = await mutation.mutateAsync({ dossierId, input });
+      toast.success("Research started", {
+        description: "Open the run log to follow each recorded research step.",
+        action: {
+          label: "See details",
+          onClick: () => navigate(`/investigator/${dossierId}/runs/${run.id}`),
+        },
+      });
       onClose();
     } catch (err) {
       showErrorToast(err, "Failed to start research run");
@@ -56,6 +65,9 @@ export const StartRunDialog: React.FC<StartRunDialogProps> = ({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Start Research</DialogTitle>
+          <DialogDescription>
+            Choose the scope of the next investigator research run.
+          </DialogDescription>
         </DialogHeader>
         <form id="start-run-form" onSubmit={handleSubmit}>
           <div className="space-y-3 py-2">
