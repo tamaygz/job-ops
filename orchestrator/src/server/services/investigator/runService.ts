@@ -44,7 +44,7 @@ export async function startRun(
     initiatedBy: "user",
   });
 
-  await getJobQueue().enqueue(
+  const enqueueResult = await getJobQueue().enqueue(
     "investigator_research_run",
     {
       tenantId,
@@ -52,8 +52,19 @@ export async function startRun(
       runId: run.id,
       runKind: input.runKind,
     },
-    { dedupeKey: `${tenantId}:${run.id}` },
+    { dedupeKey: `${tenantId}:${dossierId}:${input.runKind}` },
   );
+
+  if (enqueueResult.deduplicated) {
+    await runRepo.updateStatus(run.id, "cancelled", {
+      completedAt: nowSeconds(),
+      errorCode: "deduplicated",
+      errorMessage: `Deduplicated by queued run ${enqueueResult.id}`,
+    });
+    throw conflict(
+      `A run of kind "${input.runKind}" is already queued for dossier ${dossierId} (runId: ${enqueueResult.id})`,
+    );
+  }
 
   await timelineRepo.insertEvent({
     dossierId,
