@@ -533,7 +533,7 @@ export const InvestigatorRunDetailPage: React.FC = () => {
                             href={source.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            aria-label={`Open source: ${source.title}`}
+                            aria-label={`Open ${source.title} in new tab`}
                           >
                             Open
                           </a>

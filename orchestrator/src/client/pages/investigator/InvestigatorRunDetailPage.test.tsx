@@ -203,7 +203,7 @@ describe("InvestigatorRunDetailPage", () => {
     expect(screen.getByText("Source saved")).toBeInTheDocument();
     expect(screen.queryByText(/source-2/i)).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /open source: ceo profile/i }),
+      screen.getByRole("link", { name: /open ceo profile in new tab/i }),
     ).toHaveAttribute("href", "https://acme.test/team");
     expect(mocks.useTimeline).toHaveBeenCalledWith(
       "dossier-1",
