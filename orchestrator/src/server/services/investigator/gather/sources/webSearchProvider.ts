@@ -1,15 +1,14 @@
 import * as sourceService from "@server/services/investigator/sourceService";
+import * as timelineService from "@server/services/investigator/timelineService";
 import { runWebSearch } from "@server/services/web-search/service";
 import type { InvestigatorProvider } from "../types";
 import { truncateText } from "../utils/text";
 
 const MAX_EXCERPT_CHARS = 1200;
 
-function inferSourceType(url: string | null):
-  | "news_article"
-  | "review_site"
-  | "public_profile"
-  | "other_web_page" {
+function inferSourceType(
+  url: string | null,
+): "news_article" | "review_site" | "public_profile" | "other_web_page" {
   if (!url) return "other_web_page";
   const lower = url.toLowerCase();
   if (lower.includes("news") || lower.includes("press")) return "news_article";
@@ -43,6 +42,20 @@ export const webSearchProvider: InvestigatorProvider = {
     );
 
     const search = await runWebSearch(query);
+
+    await timelineService
+      .writeEvent(
+        context.dossierId,
+        "search_queried",
+        {
+          query,
+          resultCount: search.results.length,
+          providersAttempted: search.providersAttempted,
+        },
+        { runId: context.runId },
+      )
+      .catch(() => {});
+
     if (search.providersAttempted === 0) {
       return {
         status: "skipped",

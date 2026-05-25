@@ -89,6 +89,8 @@ export const TimelineEventType = {
   summary_saved: "summary_saved",
   status_changed: "status_changed",
   dossier_merged: "dossier_merged",
+  url_fetched: "url_fetched",
+  search_queried: "search_queried",
 } as const;
 export type TimelineEventType =
   (typeof TimelineEventType)[keyof typeof TimelineEventType];

@@ -1,4 +1,5 @@
 import * as sourceService from "@server/services/investigator/sourceService";
+import * as timelineService from "@server/services/investigator/timelineService";
 import { buildCompanySiteCandidateUrls } from "@server/services/investigator/urlUtils";
 import { isLocalOrPrivateHostname } from "@server/services/tracer-links";
 import type { InvestigatorProvider } from "../types";
@@ -66,6 +67,20 @@ export const companySiteProvider: InvestigatorProvider = {
       if (!isPublicHttpUrl(url) || isBlockedHost(url)) continue;
 
       const content = await fetchPageText(url).catch(() => null);
+
+      await timelineService
+        .writeEvent(
+          context.dossierId,
+          "url_fetched",
+          {
+            url,
+            hasContent:
+              content != null && content.text.length >= MIN_TEXT_CHARS,
+          },
+          { runId: context.runId },
+        )
+        .catch(() => {});
+
       if (!content || content.text.length < MIN_TEXT_CHARS) continue;
 
       const title = content.title || context.dossier.companyName;
