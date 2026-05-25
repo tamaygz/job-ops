@@ -7,18 +7,13 @@ export type InvestigatorGatherSettings = {
   salaryProviders: string[];
 };
 
-export async function loadInvestigatorGatherSettings(): Promise<
-  InvestigatorGatherSettings
-> {
-  const [
-    rawSourceProviders,
-    rawPeopleProviders,
-    rawSalaryProviders,
-  ] = await Promise.all([
-    settingsRepo.getSetting("investigatorSourceProviders"),
-    settingsRepo.getSetting("investigatorPeopleProviders"),
-    settingsRepo.getSetting("investigatorSalaryProviders"),
-  ]);
+export async function loadInvestigatorGatherSettings(): Promise<InvestigatorGatherSettings> {
+  const [rawSourceProviders, rawPeopleProviders, rawSalaryProviders] =
+    await Promise.all([
+      settingsRepo.getSetting("investigatorSourceProviders"),
+      settingsRepo.getSetting("investigatorPeopleProviders"),
+      settingsRepo.getSetting("investigatorSalaryProviders"),
+    ]);
 
   return {
     sourceProviders:

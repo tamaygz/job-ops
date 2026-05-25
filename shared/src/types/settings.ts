@@ -36,11 +36,7 @@ export const LLM_PROVIDER_VALUES = [
 ] as const;
 export type LlmProviderId = (typeof LLM_PROVIDER_VALUES)[number];
 
-export const WEB_SEARCH_PROVIDER_VALUES = [
-  "bing",
-  "searxng",
-  "brave",
-] as const;
+export const WEB_SEARCH_PROVIDER_VALUES = ["bing", "searxng", "brave"] as const;
 export type WebSearchProviderId = (typeof WEB_SEARCH_PROVIDER_VALUES)[number];
 
 export const LLM_PURPOSE_VALUES = [

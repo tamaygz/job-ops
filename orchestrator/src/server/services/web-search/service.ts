@@ -1,7 +1,7 @@
 import { logger } from "@infra/logger";
 import { sanitizeError } from "@infra/sanitize";
-import { loadWebSearchSettings } from "./settings";
 import { webSearchProvidersById } from "./providers";
+import { loadWebSearchSettings } from "./settings";
 import type {
   WebSearchProviderId,
   WebSearchResult,

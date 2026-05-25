@@ -50,7 +50,9 @@ vi.mock("@client/components/layout", () => ({
       {actions}
     </header>
   ),
-  PageMain: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+  PageMain: ({ children }: { children: React.ReactNode }) => (
+    <main>{children}</main>
+  ),
 }));
 
 vi.mock("@client/components/investigator/RunProgressPanel", () => ({
@@ -95,12 +97,18 @@ const renderPage = () => renderWithQueryClient(<InvestigatorDetailPage />);
 describe("InvestigatorDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.useStartRun.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mocks.useStartRun.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    });
     mocks.useUpdateDossier.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
     });
-    mocks.useCancelRun.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    mocks.useCancelRun.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    });
   });
 
   it("renders dossier details, tabs, and the empty run-history state", () => {
@@ -124,7 +132,9 @@ describe("InvestigatorDetailPage", () => {
       "href",
       "https://acme.test",
     );
-    expect(screen.getByRole("button", { name: /start research/i })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /start research/i }),
+    ).toBeEnabled();
     expect(screen.getByText("Summary")).toBeInTheDocument();
     expect(screen.getByText("Sources")).toBeInTheDocument();
     expect(screen.getByText("People")).toBeInTheDocument();
@@ -132,7 +142,9 @@ describe("InvestigatorDetailPage", () => {
     expect(screen.getByTestId("run-progress-panel")).toBeInTheDocument();
     expect(screen.getByTestId("summary-panel")).toBeInTheDocument();
     expect(
-      screen.getByText(/no research runs yet\. click "start research" to begin\./i),
+      screen.getByText(
+        /no research runs yet\. click "start research" to begin\./i,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -163,7 +175,9 @@ describe("InvestigatorDetailPage", () => {
 
     renderPage();
 
-    expect(screen.getByRole("button", { name: /running…|running\.\.\./i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /running…|running\.\.\./i }),
+    ).toBeDisabled();
     expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
   });
 });

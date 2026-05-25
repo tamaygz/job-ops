@@ -59,7 +59,9 @@ export async function runPeopleProviders(
         runId: context.runId,
         dossierId: context.dossierId,
         provider: provider.id,
-        error: sanitizeError(error instanceof Error ? error : new Error(String(error))),
+        error: sanitizeError(
+          error instanceof Error ? error : new Error(String(error)),
+        ),
       });
     }
   }

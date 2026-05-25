@@ -1,3 +1,4 @@
+import { dossierStatusConfig } from "@client/components/investigator/statusConfig";
 import { EmptyState, PageHeader, PageMain } from "@client/components/layout";
 import { useCreateDossier } from "@client/hooks/queries/useInvestigatorMutations";
 import { useDossiers } from "@client/hooks/queries/useInvestigatorQueries";
@@ -32,7 +33,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { dossierStatusConfig } from "@client/components/investigator/statusConfig";
 
 // ---------------------------------------------------------------------------
 // Status config
