@@ -26,4 +26,3 @@ tmp/
 # Virtual environment for Python
 .venv
 **.log
-node_modules/
