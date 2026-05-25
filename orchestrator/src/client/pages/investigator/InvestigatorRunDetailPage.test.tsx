@@ -8,11 +8,16 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   useDossier: vi.fn(),
   usePeople: vi.fn(),
+  refetchPeople: vi.fn(),
   useRun: vi.fn(),
   useSalary: vi.fn(),
+  refetchSalary: vi.fn(),
   useSources: vi.fn(),
+  refetchSources: vi.fn(),
   useSummaries: vi.fn(),
+  refetchSummaries: vi.fn(),
   useTimeline: vi.fn(),
+  refetchTimeline: vi.fn(),
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -103,6 +108,9 @@ describe("InvestigatorRunDetailPage", () => {
         },
       ],
       isLoading: false,
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetchSources,
     });
     mocks.usePeople.mockReturnValue({
       data: [
@@ -117,6 +125,9 @@ describe("InvestigatorRunDetailPage", () => {
         },
       ],
       isLoading: false,
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetchPeople,
     });
     mocks.useSalary.mockReturnValue({
       data: [
@@ -134,6 +145,9 @@ describe("InvestigatorRunDetailPage", () => {
         },
       ],
       isLoading: false,
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetchSalary,
     });
     mocks.useSummaries.mockReturnValue({
       data: [
@@ -146,6 +160,9 @@ describe("InvestigatorRunDetailPage", () => {
         },
       ],
       isLoading: false,
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetchSummaries,
     });
     mocks.useTimeline.mockReturnValue({
       data: [
@@ -165,6 +182,9 @@ describe("InvestigatorRunDetailPage", () => {
         },
       ],
       isLoading: false,
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetchTimeline,
     });
   });
 
@@ -182,5 +202,33 @@ describe("InvestigatorRunDetailPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Source saved")).toBeInTheDocument();
     expect(screen.queryByText(/source-2/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /open source: ceo profile/i }),
+    ).toHaveAttribute("href", "https://acme.test/team");
+    expect(mocks.useTimeline).toHaveBeenCalledWith(
+      "dossier-1",
+      { runId: "run-1" },
+      { enabled: true },
+    );
+  });
+
+  it("surfaces section errors instead of misleading empty states", () => {
+    mocks.useSources.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      refetch: mocks.refetchSources,
+    });
+
+    renderWithQueryClient(<InvestigatorRunDetailPage />);
+
+    expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByText("Sources could not be loaded."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Nothing has been recorded for this step yet."),
+    ).not.toBeInTheDocument();
   });
 });

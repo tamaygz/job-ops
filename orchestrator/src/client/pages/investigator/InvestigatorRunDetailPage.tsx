@@ -1,4 +1,10 @@
 import { investigatorRunKindLabels } from "@client/components/investigator/runMetadata";
+import {
+  compareTimelineEventsAscending,
+  formatTimelineEventLabel,
+  formatTimelineOccurredAt,
+  summarizeTimelinePayload,
+} from "@client/components/investigator/timelineFormatting";
 import { PageHeader, PageMain } from "@client/components/layout";
 import {
   useDossier,
@@ -9,8 +15,14 @@ import {
   useSummaries,
   useTimeline,
 } from "@client/hooks/queries/useInvestigatorQueries";
-import type { TimelineEventType } from "@shared/types";
-import { ArrowLeft, Clock3, ExternalLink, Search } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Clock3,
+  ExternalLink,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import type React from "react";
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -24,22 +36,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-const EVENT_LABELS: Record<TimelineEventType, string> = {
-  dossier_created: "Dossier created",
-  job_linked: "Job linked",
-  run_started: "Research run started",
-  run_completed: "Research run completed",
-  run_partial_failed: "Research run partially failed",
-  run_failed: "Research run failed",
-  source_saved: "Source saved",
-  source_reviewed: "Source reviewed",
-  person_saved: "Person saved",
-  salary_saved: "Salary observation saved",
-  summary_saved: "Summary saved",
-  status_changed: "Status changed",
-  dossier_merged: "Dossier merged",
-};
 
 const RUN_STATUS_STYLES: Record<string, string> = {
   queued: "border-blue-500/30 bg-blue-500/10 text-blue-200",
@@ -86,34 +82,11 @@ function formatElapsed(
   return `${minutes}m ${seconds}s`;
 }
 
-function startCase(value: string): string {
+function formatLabel(value: string): string {
   return value
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/[_-]+/g, " ")
     .replace(/^./, (character) => character.toUpperCase());
-}
-
-function formatValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (Array.isArray(value)) return value.join(", ");
-  return "View details";
-}
-
-function summarizePayload(payload: Record<string, unknown>): string | null {
-  const entries = Object.entries(payload).filter(([, value]) => {
-    if (value === null || value === undefined) {
-      return false;
-    }
-    return !(typeof value === "string" && value.trim().length === 0);
-  });
-  if (entries.length === 0) return null;
-  return entries
-    .slice(0, 4)
-    .map(([key, value]) => `${startCase(key)}: ${formatValue(value)}`)
-    .join(" • ");
 }
 
 function formatSalaryRange(
@@ -145,6 +118,64 @@ function EmptyStep({
   return <p className="text-sm text-muted-foreground">{message}</p>;
 }
 
+function QueryErrorState({
+  title,
+  description,
+  onRetry,
+  isRetrying,
+}: {
+  title: string;
+  description: string;
+  onRetry: () => void;
+  isRetrying?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4">
+      <div className="flex items-start gap-3">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="text-sm font-medium text-rose-200">{title}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1"
+            onClick={onRetry}
+            disabled={isRetrying}
+          >
+            <RefreshCw
+              className={cn("h-3.5 w-3.5", isRetrying && "animate-spin")}
+            />
+            Retry
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResultMetric({
+  label,
+  count,
+  unavailable = false,
+}: {
+  label: string;
+  count: number;
+  unavailable?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border px-4 py-3">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-semibold">
+        {unavailable ? "Unavailable" : count}
+      </p>
+    </div>
+  );
+}
+
 export const InvestigatorRunDetailPage: React.FC = () => {
   const { dossierId = "", runId = "" } = useParams<{
     dossierId: string;
@@ -163,26 +194,52 @@ export const InvestigatorRunDetailPage: React.FC = () => {
   } = useRun(dossierId, runId, {
     enabled: Boolean(dossierId && runId),
   });
-  const { data: sources, isLoading: sourcesLoading } = useSources(dossierId, {
+  const {
+    data: sources,
+    isLoading: sourcesLoading,
+    isError: sourcesError,
+    isFetching: sourcesFetching,
+    refetch: refetchSources,
+  } = useSources(dossierId, {
     enabled: Boolean(dossierId),
   });
-  const { data: people, isLoading: peopleLoading } = usePeople(dossierId, {
+  const {
+    data: people,
+    isLoading: peopleLoading,
+    isError: peopleError,
+    isFetching: peopleFetching,
+    refetch: refetchPeople,
+  } = usePeople(dossierId, {
     enabled: Boolean(dossierId),
   });
-  const { data: salary, isLoading: salaryLoading } = useSalary(dossierId, {
+  const {
+    data: salary,
+    isLoading: salaryLoading,
+    isError: salaryError,
+    isFetching: salaryFetching,
+    refetch: refetchSalary,
+  } = useSalary(dossierId, {
     enabled: Boolean(dossierId),
   });
-  const { data: summaries, isLoading: summariesLoading } = useSummaries(
+  const {
+    data: summaries,
+    isLoading: summariesLoading,
+    isError: summariesError,
+    isFetching: summariesFetching,
+    refetch: refetchSummaries,
+  } = useSummaries(dossierId, undefined, {
+    enabled: Boolean(dossierId),
+  });
+  const {
+    data: timeline,
+    isLoading: timelineLoading,
+    isError: timelineError,
+    isFetching: timelineFetching,
+    refetch: refetchTimeline,
+  } = useTimeline(
     dossierId,
-    undefined,
-    {
-      enabled: Boolean(dossierId),
-    },
-  );
-  const { data: timeline, isLoading: timelineLoading } = useTimeline(
-    dossierId,
-    { limit: 200 },
-    { enabled: Boolean(dossierId) },
+    { runId },
+    { enabled: Boolean(dossierId && runId) },
   );
 
   const runSources = useMemo(
@@ -205,7 +262,7 @@ export const InvestigatorRunDetailPage: React.FC = () => {
     () =>
       [...(timeline ?? [])]
         .filter((event) => event.runId === runId)
-        .sort((left, right) => left.occurredAt - right.occurredAt),
+        .sort(compareTimelineEventsAscending),
     [runId, timeline],
   );
 
@@ -359,42 +416,30 @@ export const InvestigatorRunDetailPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <div className="rounded-lg border px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Sources
-                </p>
-                <p className="mt-1 text-2xl font-semibold">
-                  {runSources.length}
-                </p>
-              </div>
+              <ResultMetric
+                label="Sources"
+                count={runSources.length}
+                unavailable={sourcesError}
+              />
               {phasePlan.people ? (
-                <div className="rounded-lg border px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    People
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold">
-                    {runPeople.length}
-                  </p>
-                </div>
+                <ResultMetric
+                  label="People"
+                  count={runPeople.length}
+                  unavailable={peopleError}
+                />
               ) : null}
               {phasePlan.salary ? (
-                <div className="rounded-lg border px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Salary signals
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold">
-                    {runSalary.length}
-                  </p>
-                </div>
+                <ResultMetric
+                  label="Salary signals"
+                  count={runSalary.length}
+                  unavailable={salaryError}
+                />
               ) : null}
-              <div className="rounded-lg border px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Summaries
-                </p>
-                <p className="mt-1 text-2xl font-semibold">
-                  {runSummaries.length}
-                </p>
-              </div>
+              <ResultMetric
+                label="Summaries"
+                count={runSummaries.length}
+                unavailable={summariesError}
+              />
             </CardContent>
           </Card>
         </div>
@@ -407,18 +452,24 @@ export const InvestigatorRunDetailPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {runTimeline.length === 0 ? (
+            {timelineError ? (
+              <QueryErrorState
+                title="Audit trail could not be loaded."
+                description="Retry to load the events recorded for this run."
+                onRetry={() => void refetchTimeline()}
+                isRetrying={timelineFetching}
+              />
+            ) : runTimeline.length === 0 ? (
               <EmptyStep message="This run has not emitted any audit events yet." />
             ) : (
               runTimeline.map((event) => {
-                const payloadSummary = summarizePayload(event.payload);
+                const payloadSummary = summarizeTimelinePayload(event.payload);
                 return (
                   <div key={event.id} className="rounded-lg border px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 space-y-1">
                         <p className="text-sm font-medium">
-                          {EVENT_LABELS[event.eventType] ??
-                            startCase(event.eventType)}
+                          {formatTimelineEventLabel(event.eventType)}
                         </p>
                         {payloadSummary ? (
                           <p className="text-xs text-muted-foreground">
@@ -428,7 +479,9 @@ export const InvestigatorRunDetailPage: React.FC = () => {
                       </div>
                       <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
                         <Clock3 className="h-3.5 w-3.5" />
-                        <span>{formatDateTime(event.occurredAt)}</span>
+                        <span>
+                          {formatTimelineOccurredAt(event.occurredAt)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -447,7 +500,14 @@ export const InvestigatorRunDetailPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {runSources.length === 0 ? (
+              {sourcesError ? (
+                <QueryErrorState
+                  title="Sources could not be loaded."
+                  description="Retry to load the evidence captured for this run."
+                  onRetry={() => void refetchSources()}
+                  isRetrying={sourcesFetching}
+                />
+              ) : runSources.length === 0 ? (
                 <EmptyStep />
               ) : (
                 runSources.map((source, index) => (
@@ -458,7 +518,7 @@ export const InvestigatorRunDetailPage: React.FC = () => {
                           {index + 1}. {source.title}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {startCase(source.sourceType)}
+                          {formatLabel(source.sourceType)}
                           {source.sourceHost ? ` • ${source.sourceHost}` : ""}
                         </p>
                       </div>
@@ -473,6 +533,7 @@ export const InvestigatorRunDetailPage: React.FC = () => {
                             href={source.url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            aria-label={`Open source: ${source.title}`}
                           >
                             Open
                           </a>
@@ -498,6 +559,13 @@ export const InvestigatorRunDetailPage: React.FC = () => {
             <CardContent className="space-y-3">
               {!phasePlan.people ? (
                 <EmptyStep message="This run type does not include people extraction." />
+              ) : peopleError ? (
+                <QueryErrorState
+                  title="People results could not be loaded."
+                  description="Retry to load the contacts captured for this run."
+                  onRetry={() => void refetchPeople()}
+                  isRetrying={peopleFetching}
+                />
               ) : runPeople.length === 0 ? (
                 <EmptyStep />
               ) : (
@@ -538,6 +606,13 @@ export const InvestigatorRunDetailPage: React.FC = () => {
             <CardContent className="space-y-3">
               {!phasePlan.salary ? (
                 <EmptyStep message="This run type does not include salary extraction." />
+              ) : salaryError ? (
+                <QueryErrorState
+                  title="Salary signals could not be loaded."
+                  description="Retry to load the compensation evidence captured for this run."
+                  onRetry={() => void refetchSalary()}
+                  isRetrying={salaryFetching}
+                />
               ) : runSalary.length === 0 ? (
                 <EmptyStep />
               ) : (
@@ -584,7 +659,14 @@ export const InvestigatorRunDetailPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {runSummaries.length === 0 ? (
+              {summariesError ? (
+                <QueryErrorState
+                  title="Summaries could not be loaded."
+                  description="Retry to load the narrative outputs generated for this run."
+                  onRetry={() => void refetchSummaries()}
+                  isRetrying={summariesFetching}
+                />
+              ) : runSummaries.length === 0 ? (
                 <EmptyStep />
               ) : (
                 runSummaries.map((summary) => (

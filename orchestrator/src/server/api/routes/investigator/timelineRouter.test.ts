@@ -47,12 +47,14 @@ describe.sequential("Timeline API routes", () => {
     return json.data.id;
   }
 
-  async function startRun(dossierId: string): Promise<void> {
-    await fetch(dossiersUrl(`/${dossierId}/runs`), {
+  async function startRun(dossierId: string): Promise<string> {
+    const res = await fetch(dossiersUrl(`/${dossierId}/runs`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ runKind: "company_brief" }),
     });
+    const json = (await res.json()) as { data: { id: string } };
+    return json.data.id;
   }
 
   async function getTimeline(
@@ -120,6 +122,18 @@ describe.sequential("Timeline API routes", () => {
   it("returns 404 for unknown dossier", async () => {
     const res = await fetch(dossiersUrl("/nonexistent-dossier-id/timeline"));
     expect(res.status).toBe(404);
+  });
+
+  it("can scope the timeline to a specific run", async () => {
+    const dossierId = await createDossier("Scoped Timeline Co");
+    const runId = await startRun(dossierId);
+    const unscoped = await getTimeline(dossierId);
+
+    const { status, data } = await getTimeline(dossierId, `?runId=${runId}`);
+    expect(status).toBe(200);
+    expect(unscoped.data.some((event) => event.runId === null)).toBe(true);
+    expect(data.length).toBeGreaterThan(0);
+    expect(data.every((event) => event.runId === runId)).toBe(true);
   });
 
   it("event payloads are records and dossierId matches", async () => {

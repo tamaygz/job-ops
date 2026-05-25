@@ -13,6 +13,7 @@ export type TimelineQueryOpts = {
   limit?: number;
   before?: number;
   eventType?: TimelineEventType;
+  runId?: string;
 };
 
 function mapRow(
@@ -66,7 +67,7 @@ export async function findByDossier(
   opts: TimelineQueryOpts = {},
 ): Promise<InvestigatorTimelineEvent[]> {
   const tenantId = getActiveTenantId();
-  const limit = Math.min(opts.limit ?? 50, 200);
+  const limit = opts.limit == null ? undefined : Math.min(opts.limit, 200);
 
   const conditions = [
     eq(investigatorTimelineEvents.tenantId, tenantId),
@@ -81,12 +82,17 @@ export async function findByDossier(
     conditions.push(eq(investigatorTimelineEvents.eventType, opts.eventType));
   }
 
-  const rows = await db
+  if (opts.runId != null) {
+    conditions.push(eq(investigatorTimelineEvents.runId, opts.runId));
+  }
+
+  const query = db
     .select()
     .from(investigatorTimelineEvents)
     .where(and(...conditions))
-    .orderBy(desc(investigatorTimelineEvents.occurredAt))
-    .limit(limit);
+    .orderBy(desc(investigatorTimelineEvents.occurredAt));
+
+  const rows = limit == null ? await query : await query.limit(limit);
 
   return rows.map(mapRow);
 }

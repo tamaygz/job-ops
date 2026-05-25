@@ -31,7 +31,12 @@ export async function writeEvent(
 
 export async function listEvents(
   dossierId: string,
-  opts?: { limit?: number; before?: number; eventType?: TimelineEventType },
+  opts?: {
+    limit?: number;
+    before?: number;
+    eventType?: TimelineEventType;
+    runId?: string;
+  },
 ): Promise<InvestigatorTimelineEvent[]> {
   const dossier = await dossierRepo.findById(dossierId);
   if (!dossier) {
