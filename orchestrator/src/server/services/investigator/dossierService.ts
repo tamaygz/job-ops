@@ -38,6 +38,16 @@ function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
+async function writeTimelineEvent(input: {
+  dossierId: string;
+  eventType: Parameters<typeof timelineRepo.insert>[0]["eventType"];
+  payload: Record<string, unknown>;
+  occurredAt?: number;
+  runId?: string | null;
+}): Promise<void> {
+  await timelineRepo.insert(input);
+}
+
 export async function createDossier(
   input: CreateInvestigatorDossierInput,
 ): Promise<InvestigatorDossier> {
@@ -60,7 +70,7 @@ export async function createDossier(
     createdFromJobId: input.sourceJobId ?? null,
   });
 
-  await timelineRepo.insertEvent({
+  await writeTimelineEvent({
     dossierId: dossier.id,
     eventType: "dossier_created",
     payload: { companyName: input.companyName, canonicalKey },
@@ -103,7 +113,7 @@ export async function createDossierFromJob(
 
   const now = nowSeconds();
 
-  await timelineRepo.insertEvent({
+  await writeTimelineEvent({
     dossierId: dossier.id,
     eventType: "dossier_created",
     payload: { companyName, canonicalKey, seedJobId: jobId },
@@ -112,7 +122,7 @@ export async function createDossierFromJob(
 
   await dossierRepo.linkJob(dossier.id, jobId, "seeded");
 
-  await timelineRepo.insertEvent({
+  await writeTimelineEvent({
     dossierId: dossier.id,
     eventType: "job_linked",
     payload: { jobId, linkReason: "seeded" },
@@ -136,6 +146,16 @@ export async function updateDossier(
 
   const updateData: dossierRepo.DossierUpdateData = {};
   if (input.companyName !== undefined) {
+    const canonicalKey = normalizeCanonicalKey(input.companyName);
+    if (canonicalKey !== existing.canonicalCompanyKey) {
+      const duplicate = await dossierRepo.findByCanonicalKey(canonicalKey);
+      if (duplicate && duplicate.id !== dossierId) {
+        throw conflict(
+          `A dossier for "${input.companyName}" already exists (id: ${duplicate.id})`,
+        );
+      }
+      updateData.canonicalCompanyKey = canonicalKey;
+    }
     updateData.companyName = input.companyName;
   }
   if (input.companyUrl !== undefined) {
@@ -153,7 +173,7 @@ export async function updateDossier(
   if (!updated) throw notFound(`Dossier ${dossierId} not found after update`);
 
   if (input.status !== undefined && input.status !== existing.status) {
-    await timelineRepo.insertEvent({
+    await writeTimelineEvent({
       dossierId,
       eventType: "status_changed",
       payload: { from: existing.status, to: input.status },
@@ -174,7 +194,7 @@ export async function linkJobToDossier(
 
   const { deduplicated } = await dossierRepo.linkJob(dossierId, jobId, reason);
   if (!deduplicated) {
-    await timelineRepo.insertEvent({
+    await writeTimelineEvent({
       dossierId,
       eventType: "job_linked",
       payload: { jobId, linkReason: reason },

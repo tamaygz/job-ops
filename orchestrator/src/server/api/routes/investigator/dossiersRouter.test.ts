@@ -1,4 +1,5 @@
 import type { Server } from "node:http";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { startServer, stopServer } from "../test-utils";
 
@@ -7,9 +8,11 @@ describe.sequential("Dossiers API routes", () => {
   let baseUrl: string;
   let closeDb: () => void;
   let tempDir: string;
+  let seededJobCounter = 0;
 
   beforeEach(async () => {
     ({ server, baseUrl, closeDb, tempDir } = await startServer());
+    seededJobCounter = 0;
   });
 
   afterEach(async () => {
@@ -40,18 +43,26 @@ describe.sequential("Dossiers API routes", () => {
   async function seedJob() {
     const { db, schema } = await import("@server/db");
     const now = new Date().toISOString();
-    const jobId = "test-job-fixture-001";
+    seededJobCounter += 1;
+    const jobId = `test-job-fixture-${seededJobCounter}`;
     await db.insert(schema.jobs).values({
       id: jobId,
       source: "manual",
-      title: "Staff Engineer",
+      title: `Staff Engineer ${jobId}`,
       employer: "BetaCorp",
-      jobUrl: "https://beta.example.com/jobs/staff-engineer",
+      jobUrl: `https://beta.example.com/jobs/${jobId}`,
       createdAt: now,
       updatedAt: now,
       discoveredAt: now,
     });
     return jobId;
+  }
+
+  async function createDossierRecord(overrides: Record<string, unknown> = {}) {
+    const res = await createDossier(overrides);
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    return body.data as { id: string; companyName: string };
   }
 
   // -------------------------------------------------------------------------
@@ -179,6 +190,90 @@ describe.sequential("Dossiers API routes", () => {
     expect(body.data[0].companyName).toBe("UniqueXYZ Corp");
   });
 
+  it("filters dossiers by tag", async () => {
+    await createDossier({ companyName: "Tagged Co", tags: ["priority"] });
+    await createDossier({ companyName: "Untagged Co", tags: ["other"] });
+
+    const res = await fetch(dossiersUrl("?tag=priority"));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].companyName).toBe("Tagged Co");
+  });
+
+  it("filters dossiers by linkedJobId", async () => {
+    const linkedJobId = await seedJob();
+    const otherJobId = await seedJob();
+    const linkedDossier = await createDossierRecord({
+      companyName: "Linked Co",
+    });
+    const otherDossier = await createDossierRecord({ companyName: "Other Co" });
+
+    await fetch(dossiersUrl(`/${linkedDossier.id}/jobs`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId: linkedJobId }),
+    });
+    await fetch(dossiersUrl(`/${otherDossier.id}/jobs`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId: otherJobId }),
+    });
+
+    const res = await fetch(dossiersUrl(`?linkedJobId=${linkedJobId}`));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].companyName).toBe("Linked Co");
+  });
+
+  it("filters dossiers by hasPeople", async () => {
+    const withPeople = await createDossierRecord({ companyName: "People Co" });
+    await createDossierRecord({ companyName: "No People Co" });
+
+    const { db, schema } = await import("@server/db");
+    const now = new Date().toISOString();
+    await db.insert(schema.investigatorPeople).values({
+      id: "investigator-person-1",
+      tenantId: "tenant_default",
+      dossierId: withPeople.id,
+      fullName: "Pat Recruiter",
+      personType: "recruiter",
+      confidenceLabel: "high",
+      sourceIds: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const res = await fetch(dossiersUrl("?hasPeople=true"));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].companyName).toBe("People Co");
+  });
+
+  it("filters dossiers by stale research state", async () => {
+    const freshDossier = await createDossierRecord({ companyName: "Fresh Co" });
+    await createDossierRecord({ companyName: "Stale Co" });
+
+    const { db, schema } = await import("@server/db");
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    await db
+      .update(schema.investigatorDossiers)
+      .set({ lastResearchedAt: nowSeconds })
+      .where(eq(schema.investigatorDossiers.id, freshDossier.id));
+
+    const res = await fetch(dossiersUrl("?stale=true"));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].companyName).toBe("Stale Co");
+  });
+
   // -------------------------------------------------------------------------
   // PATCH /:dossierId
   // -------------------------------------------------------------------------
@@ -198,6 +293,24 @@ describe.sequential("Dossiers API routes", () => {
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(body.data.status).toBe("archived");
+  });
+
+  it("patches a dossier company name and recomputes canonicalCompanyKey", async () => {
+    const createRes = await createDossier();
+    const created = await createRes.json();
+    const id = created.data.id as string;
+
+    const res = await fetch(dossiersUrl(`/${id}`), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companyName: "Beta, LLC" }),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.companyName).toBe("Beta, LLC");
+    expect(body.data.canonicalCompanyKey).toBe("beta llc");
   });
 
   it("returns 400 for invalid patch payload", async () => {
