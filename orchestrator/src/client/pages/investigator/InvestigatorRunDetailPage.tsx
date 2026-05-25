@@ -63,7 +63,7 @@ const RUN_PHASES: Record<
 };
 
 function formatDateTime(timestampSeconds: number | null): string {
-  if (timestampSeconds == null) return "Not yet";
+  if (timestampSeconds === null) return "—";
   return new Date(timestampSeconds * 1000).toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -77,7 +77,7 @@ function formatElapsed(
   startedAtSeconds: number | null,
   completedAtSeconds: number | null,
 ): string | null {
-  if (startedAtSeconds == null) return null;
+  if (startedAtSeconds === null) return null;
   const end = completedAtSeconds ?? Math.floor(Date.now() / 1000);
   const totalSeconds = Math.max(0, end - startedAtSeconds);
   if (totalSeconds < 60) return `${totalSeconds}s`;
@@ -125,11 +125,15 @@ function formatSalaryRange(
     maximumFractionDigits: 0,
   });
   const prefix = currency ? `${currency} ` : "";
-  if (minAmount != null && maxAmount != null) {
-    return `${prefix}${formatter.format(minAmount)} - ${prefix}${formatter.format(maxAmount)}`;
+  if (minAmount !== null && maxAmount !== null) {
+    return `${prefix}${formatter.format(minAmount)} - ${formatter.format(maxAmount)}`;
   }
-  if (minAmount != null) return `From ${prefix}${formatter.format(minAmount)}`;
-  if (maxAmount != null) return `Up to ${prefix}${formatter.format(maxAmount)}`;
+  if (minAmount !== null) {
+    return `From ${prefix}${formatter.format(minAmount)}`;
+  }
+  if (maxAmount !== null) {
+    return `Up to ${prefix}${formatter.format(maxAmount)}`;
+  }
   return "Range not recorded";
 }
 
