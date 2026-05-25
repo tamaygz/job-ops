@@ -21,10 +21,7 @@ vi.mock("@server/repositories/jobs", () => ({
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
-import {
-  normalizeCanonicalKey,
-  updateDossier,
-} from "./dossierService";
+import { normalizeCanonicalKey, updateDossier } from "./dossierService";
 
 describe("normalizeCanonicalKey", () => {
   it("strips punctuation and lowercases", () => {

@@ -187,7 +187,9 @@ describe.sequential("Dossiers API routes", () => {
   it("filters dossiers by linkedJobId", async () => {
     const linkedJobId = await seedJob();
     const otherJobId = await seedJob();
-    const linkedDossier = await createDossierRecord({ companyName: "Linked Co" });
+    const linkedDossier = await createDossierRecord({
+      companyName: "Linked Co",
+    });
     const otherDossier = await createDossierRecord({ companyName: "Other Co" });
 
     await fetch(dossiersUrl(`/${linkedDossier.id}/jobs`), {
