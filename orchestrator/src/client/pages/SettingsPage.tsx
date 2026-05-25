@@ -549,6 +549,15 @@ const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
     data.investigatorSummarySourceLimit.override,
   investigatorSummaryExcerptMaxChars:
     data.investigatorSummaryExcerptMaxChars.override,
+  webSearchProviders:
+    data.webSearchProviders.override ?? data.webSearchProviders.value ?? [],
+  webSearchResultLimit: data.webSearchResultLimit.override,
+  webSearchMarket: data.webSearchMarket.override ?? "",
+  webSearchBingEndpoint: data.webSearchBingEndpoint.override ?? "",
+  webSearchSearxngBaseUrl: data.webSearchSearxngBaseUrl.override ?? "",
+  webSearchBingApiKey: "",
+  webSearchSearxngApiKey: "",
+  webSearchBraveApiKey: "",
 });
 
 const normalizeString = (value: string | null | undefined) => {
@@ -610,6 +619,21 @@ const normalizePurposeApiKeys = (
 const stringArraysEqual = (left: string[], right: string[]): boolean => {
   if (left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
+};
+
+const normalizeWebSearchProviders = (
+  value: WebSearchProviderId[] | null | undefined,
+): WebSearchProviderId[] => {
+  const allowed = new Set<string>(WEB_SEARCH_PROVIDER_VALUES);
+  const out: WebSearchProviderId[] = [];
+  const seen = new Set<string>();
+  for (const provider of value ?? []) {
+    if (!allowed.has(provider)) continue;
+    if (seen.has(provider)) continue;
+    seen.add(provider);
+    out.push(provider);
+  }
+  return out;
 };
 
 const nullIfSame = <T,>(value: T | null | undefined, defaultValue: T) =>
@@ -815,6 +839,35 @@ const getDerivedSettings = (settings: AppSettings | null) => {
           settings?.investigatorSummaryExcerptMaxChars?.default ?? 500,
       },
     },
+    webSearch: {
+      providers: {
+        effective: settings?.webSearchProviders?.value ?? [],
+        default: settings?.webSearchProviders?.default ?? [],
+      },
+      resultLimit: {
+        effective: settings?.webSearchResultLimit?.value ?? 8,
+        default: settings?.webSearchResultLimit?.default ?? 8,
+      },
+      market: {
+        effective: settings?.webSearchMarket?.value ?? "en-US",
+        default: settings?.webSearchMarket?.default ?? "en-US",
+      },
+      bingEndpoint: {
+        effective:
+          settings?.webSearchBingEndpoint?.value ??
+          "https://api.bing.microsoft.com/v7.0/search",
+        default:
+          settings?.webSearchBingEndpoint?.default ??
+          "https://api.bing.microsoft.com/v7.0/search",
+      },
+      searxngBaseUrl: {
+        effective: settings?.webSearchSearxngBaseUrl?.value ?? "",
+        default: settings?.webSearchSearxngBaseUrl?.default ?? "",
+      },
+      bingApiKeyHint: settings?.webSearchBingApiKeyHint ?? null,
+      searxngApiKeyHint: settings?.webSearchSearxngApiKeyHint ?? null,
+      braveApiKeyHint: settings?.webSearchBraveApiKeyHint ?? null,
+    },
   };
 };
 
@@ -995,6 +1048,7 @@ export const SettingsPage: React.FC = () => {
     scoring,
     promptTemplates,
     investigator,
+    webSearch,
   } = derived;
 
   const handleCreateBackup = async () => {
@@ -1202,6 +1256,21 @@ export const SettingsPage: React.FC = () => {
         if (value !== undefined) envPayload.webhookSecret = value;
       }
 
+      if (dirtyFields.webSearchBingApiKey) {
+        const value = normalizePrivateInput(data.webSearchBingApiKey);
+        if (value !== undefined) envPayload.webSearchBingApiKey = value;
+      }
+
+      if (dirtyFields.webSearchSearxngApiKey) {
+        const value = normalizePrivateInput(data.webSearchSearxngApiKey);
+        if (value !== undefined) envPayload.webSearchSearxngApiKey = value;
+      }
+
+      if (dirtyFields.webSearchBraveApiKey) {
+        const value = normalizePrivateInput(data.webSearchBraveApiKey);
+        if (value !== undefined) envPayload.webSearchBraveApiKey = value;
+      }
+
       const payload: Partial<UpdateSettingsInput> = {
         model: dirtyFields.llmProvider
           ? dirtyFields.model
@@ -1333,6 +1402,30 @@ export const SettingsPage: React.FC = () => {
         investigatorSummaryExcerptMaxChars: nullIfSame(
           data.investigatorSummaryExcerptMaxChars,
           investigator.excerptMaxChars.default,
+        ),
+        webSearchProviders: (() => {
+          const normalized = normalizeWebSearchProviders(
+            data.webSearchProviders,
+          );
+          return stringArraysEqual(normalized, webSearch.providers.default)
+            ? null
+            : normalized;
+        })(),
+        webSearchResultLimit: nullIfSame(
+          data.webSearchResultLimit,
+          webSearch.resultLimit.default,
+        ),
+        webSearchMarket: nullIfSame(
+          normalizeString(data.webSearchMarket),
+          webSearch.market.default,
+        ),
+        webSearchBingEndpoint: nullIfSame(
+          normalizeString(data.webSearchBingEndpoint),
+          webSearch.bingEndpoint.default,
+        ),
+        webSearchSearxngBaseUrl: nullIfSame(
+          normalizeString(data.webSearchSearxngBaseUrl),
+          webSearch.searxngBaseUrl.default,
         ),
         ...envPayload,
       };
@@ -1577,6 +1670,10 @@ export const SettingsPage: React.FC = () => {
         return pipelineWebhook.effective || jobCompleteWebhook.effective
           ? { label: "Configured", variant: "outline" as const }
           : { label: "Optional", variant: "secondary" as const };
+      case "web-search":
+        return webSearch.providers.effective.length > 0
+          ? { label: "Configured", variant: "outline" as const }
+          : { label: "Disabled", variant: "secondary" as const };
       case "tracer-links":
         return tracerReadiness?.status === "ready"
           ? { label: "Ready", variant: "outline" as const }
@@ -1673,6 +1770,16 @@ export const SettingsPage: React.FC = () => {
           lockedCount={lockedCount}
           maxProjectsTotal={effectiveMaxProjectsTotal}
           isProjectsLoading={isFetchingRxResumeProjects}
+          isLoading={isLoading}
+          isSaving={isSaving}
+          layoutMode="panel"
+        />
+      );
+      break;
+    case "web-search":
+      activeSectionContent = (
+        <WebSearchSettingsSection
+          values={webSearch}
           isLoading={isLoading}
           isSaving={isSaving}
           layoutMode="panel"
