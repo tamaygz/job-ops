@@ -8,7 +8,9 @@ function normalizeSecret(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-function normalizeOptionalString(value: string | null | undefined): string | null {
+function normalizeOptionalString(
+  value: string | null | undefined,
+): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
 }
@@ -69,7 +71,9 @@ export async function loadWebSearchSettings(): Promise<WebSearchSettings> {
     settingsRegistry.webSearchMarket.default();
 
   const bingEndpoint =
-    settingsRegistry.webSearchBingEndpoint.parse(rawBingEndpoint ?? undefined) ??
+    settingsRegistry.webSearchBingEndpoint.parse(
+      rawBingEndpoint ?? undefined,
+    ) ??
     settingsRegistry.investigatorBingSearchEndpoint.parse(
       rawLegacyBingEndpoint ?? undefined,
     ) ??
@@ -91,8 +95,7 @@ export async function loadWebSearchSettings(): Promise<WebSearchSettings> {
     ]);
 
   const searxngApiKey =
-    normalizeSecret(rawSearxngApiKey) ??
-    resolveEnvValue(["SEARXNG_API_KEY"]);
+    normalizeSecret(rawSearxngApiKey) ?? resolveEnvValue(["SEARXNG_API_KEY"]);
 
   const braveApiKey =
     normalizeSecret(rawBraveApiKey) ??

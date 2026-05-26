@@ -1,6 +1,6 @@
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
-import * as jobsRepo from "@server/repositories/jobs";
 import * as salaryRepo from "@server/repositories/investigatorSalaryRepository";
+import * as jobsRepo from "@server/repositories/jobs";
 import * as salaryService from "@server/services/investigator/salaryService";
 import type { PayInterval } from "@shared/types";
 import type { InvestigatorProvider } from "../types";

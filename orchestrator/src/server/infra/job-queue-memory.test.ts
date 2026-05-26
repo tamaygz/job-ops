@@ -17,7 +17,8 @@ describe("InMemoryJobQueue", () => {
     expect(result.deduplicated).toBe(false);
     expect(result.id).toBeTruthy();
 
-    const jobs = queue.getQueuedJobs() as import("./job-queue").QueueJobRecord<"auto_pdf_regeneration">[];
+    const jobs =
+      queue.getQueuedJobs() as import("./job-queue").QueueJobRecord<"auto_pdf_regeneration">[];
     expect(jobs).toHaveLength(1);
     expect(jobs[0]?.payload.jobId).toBe("job-1");
   });

@@ -13,10 +13,7 @@ const SOURCE_PROVIDERS = [
   webSearchProvider,
 ];
 
-const PROVIDER_ALIASES = new Map([[
-  "bing_search",
-  "web_search",
-]]);
+const PROVIDER_ALIASES = new Map([["bing_search", "web_search"]]);
 
 function resolveEnabledProviders(context: InvestigatorGatherContext) {
   const enabled = new Set(
@@ -73,7 +70,9 @@ export async function runSourceProviders(
         runId: context.runId,
         dossierId: context.dossierId,
         provider: provider.id,
-        error: sanitizeError(error instanceof Error ? error : new Error(String(error))),
+        error: sanitizeError(
+          error instanceof Error ? error : new Error(String(error)),
+        ),
       });
     }
   }

@@ -168,7 +168,11 @@ export const CreateInvestigatorPersonInputSchema = z
       personTypeValues as [PersonTypeType, ...PersonTypeType[]],
     ),
     title: z.string().nullish(),
-    profileUrl: z.string().url().nullish(),
+    profileUrl: z
+      .string()
+      .url()
+      .describe("public professional profile only")
+      .nullish(),
     roleContext: z.string().nullish(),
     notes: z.string().nullish(),
     confidenceLabel: z.enum(

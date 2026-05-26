@@ -1,10 +1,10 @@
 import { notFound } from "@infra/errors";
 import { sanitizeUnknown } from "@infra/sanitize";
-import * as settingsRepo from "@server/repositories/settings";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as sourceRepo from "@server/repositories/investigatorSourceRepository";
 import * as summaryRepo from "@server/repositories/investigatorSummaryRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
+import * as settingsRepo from "@server/repositories/settings";
 import {
   createConfiguredLlmService,
   resolveLlmModel,
@@ -69,9 +69,7 @@ const DEFAULT_SUMMARY_SETTINGS: InvestigatorSummarySettings = {
   systemPromptTemplate: DEFAULT_INVESTIGATOR_SUMMARY_SYSTEM_PROMPT,
 };
 
-async function loadInvestigatorSummarySettings(): Promise<
-  InvestigatorSummarySettings
-> {
+async function loadInvestigatorSummarySettings(): Promise<InvestigatorSummarySettings> {
   const [rawSystemPromptTemplate, rawSourceLimit, rawExcerptMaxChars] =
     await Promise.all([
       settingsRepo.getSetting("investigatorSummarySystemPromptTemplate"),

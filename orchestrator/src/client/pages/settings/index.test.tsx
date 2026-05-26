@@ -1,12 +1,12 @@
+import * as api from "@client/api";
+import { _resetTracerReadinessCache } from "@client/hooks/useTracerReadiness";
+import { renderWithQueryClient } from "@client/test/renderWithQueryClient";
 import { getDefaultPromptTemplate } from "@shared/prompt-template-definitions.js";
 import { createAppSettings } from "@shared/testing/factories.js";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as api from "../../api";
-import { _resetTracerReadinessCache } from "../../hooks/useTracerReadiness";
-import { renderWithQueryClient } from "../../test/renderWithQueryClient";
 import { SettingsPage } from "./index";
 
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
@@ -243,7 +243,9 @@ describe("SettingsPage", () => {
     await openInvestigatorSection();
 
     const sourceLimitInput = screen.getByLabelText(/sources per summary/i);
-    const excerptInput = screen.getByLabelText(/excerpt characters per source/i);
+    const excerptInput = screen.getByLabelText(
+      /excerpt characters per source/i,
+    );
     const promptInput = screen.getByLabelText(/summary system prompt/i);
     await waitFor(() => expect(sourceLimitInput).toBeEnabled());
 
