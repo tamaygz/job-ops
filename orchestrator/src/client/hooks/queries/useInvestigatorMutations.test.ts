@@ -81,4 +81,26 @@ describe("investigator mutations", () => {
       queryKey: queryKeys.investigator.dossier("d-1"),
     });
   });
+
+  it("passes runId through regenerate API when provided", async () => {
+    vi.mocked(investigatorApi.regenerateSummary).mockResolvedValue({
+      id: "s-2",
+    } as InvestigatorSummary);
+
+    const { result } = renderHookWithQueryClient(() => useRegenerateSummary());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        dossierId: "d-2",
+        type: "people_brief",
+        runId: "run-42",
+      });
+    });
+
+    expect(investigatorApi.regenerateSummary).toHaveBeenCalledWith(
+      "d-2",
+      "people_brief",
+      "run-42",
+    );
+  });
 });

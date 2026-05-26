@@ -359,7 +359,7 @@ export function useRegenerateSummary() {
       dossierId: string;
       type: SummaryType;
       runId?: string | null;
-    }) => investigatorApi.regenerateSummary(dossierId, type, runId),
+    }) => investigatorApi.regenerateSummary(dossierId, type, runId ?? null),
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.investigator.summaries(variables.dossierId),
