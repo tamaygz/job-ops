@@ -1,5 +1,5 @@
 import { renderWithQueryClient } from "@client/test/renderWithQueryClient";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InvestigatorDetailPage } from "./InvestigatorDetailPage";
@@ -53,6 +53,37 @@ vi.mock("@client/components/layout", () => ({
   PageMain: ({ children }: { children: React.ReactNode }) => (
     <main>{children}</main>
   ),
+}));
+
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DropdownMenuItem: ({
+    children,
+    onSelect,
+    disabled,
+  }: {
+    children: React.ReactNode;
+    onSelect?: () => void;
+    disabled?: boolean;
+  }) => (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      onClick={() => onSelect?.()}
+    >
+      {children}
+    </button>
+  ),
+  DropdownMenuSeparator: () => <hr />,
 }));
 
 vi.mock("@client/components/investigator/RunProgressPanel", () => ({
@@ -179,5 +210,36 @@ describe("InvestigatorDetailPage", () => {
       screen.getByRole("button", { name: /running…|running\.\.\./i }),
     ).toBeDisabled();
     expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
+  });
+
+  it("archives from the action menu using useUpdateDossier", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    mocks.useDossier.mockReturnValue({
+      data: {
+        id: "dossier-1",
+        companyName: "Acme Corp",
+        companyUrl: null,
+        status: "active",
+        tags: [],
+      },
+      isLoading: false,
+      error: null,
+    });
+    mocks.useRuns.mockReturnValue({ data: [], isLoading: false });
+    mocks.useUpdateDossier.mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    });
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: /archive/i }));
+
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        id: "dossier-1",
+        input: { status: "archived" },
+      }),
+    );
   });
 });

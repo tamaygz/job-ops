@@ -2,11 +2,10 @@ import { PeoplePanel } from "@client/components/investigator/PeoplePanel";
 import { RunProgressPanel } from "@client/components/investigator/RunProgressPanel";
 import { activeInvestigatorRunStatuses } from "@client/components/investigator/runMetadata";
 import { SalaryPanel } from "@client/components/investigator/SalaryPanel";
-import { SourceReviewPanel } from "@client/components/investigator/SourceReviewPanel";
 import { SummaryPanel } from "@client/components/investigator/SummaryPanel";
 import { dossierStatusConfig } from "@client/components/investigator/statusConfig";
-import { TimelinePanel } from "@client/components/investigator/TimelinePanel";
 import { PageHeader, PageMain } from "@client/components/layout";
+import { useUpdateDossier } from "@client/hooks/queries/useInvestigatorMutations";
 import {
   useDossier,
   useRuns,
@@ -20,7 +19,7 @@ import {
   Loader2,
   Play,
 } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +45,16 @@ import { StartRunDialog } from "./detail/StartRunDialog";
 // ---------------------------------------------------------------------------
 
 type ActiveTab = "summary" | "sources" | "people" | "salary" | "timeline";
+const SourceReviewPanel = lazy(() =>
+  import("@client/components/investigator/SourceReviewPanel").then((module) => ({
+    default: module.SourceReviewPanel,
+  })),
+);
+const TimelinePanel = lazy(() =>
+  import("@client/components/investigator/TimelinePanel").then((module) => ({
+    default: module.TimelinePanel,
+  })),
+);
 
 export const InvestigatorDetailPage: React.FC = () => {
   const { dossierId = "" } = useParams<{ dossierId: string }>();
@@ -56,6 +65,7 @@ export const InvestigatorDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>("summary");
   const [startRunOpen, setStartRunOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const updateDossierMutation = useUpdateDossier();
 
   const { data: dossier, isLoading, error } = useDossier(dossierId);
 
@@ -93,9 +103,10 @@ export const InvestigatorDetailPage: React.FC = () => {
   const handleArchive = async () => {
     if (!dossier) return;
     try {
-      // useUpdateDossier is a hook — we need a mutation instance in scope
-      // The EditDossierDialog handles the full edit flow; for quick archive we open it pre-filled
-      setEditOpen(true);
+      await updateDossierMutation.mutateAsync({
+        id: dossier.id,
+        input: { status: "archived" },
+      });
     } catch (err) {
       showErrorToast(err, "Failed to archive dossier");
     }
@@ -147,6 +158,11 @@ export const InvestigatorDetailPage: React.FC = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => void handleArchive()}
+                  disabled={
+                    !dossier ||
+                    dossier.status === "archived" ||
+                    updateDossierMutation.isPending
+                  }
                   className="text-muted-foreground"
                 >
                   Archive
@@ -215,7 +231,17 @@ export const InvestigatorDetailPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-4">
-            <SourceReviewPanel dossierId={dossierId} />
+            {activeTab === "sources" ? (
+              <Suspense
+                fallback={
+                  <div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+                    Loading sources…
+                  </div>
+                }
+              >
+                <SourceReviewPanel dossierId={dossierId} />
+              </Suspense>
+            ) : null}
           </TabsContent>
 
           <TabsContent value="people" className="space-y-4">
@@ -227,7 +253,17 @@ export const InvestigatorDetailPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
-            <TimelinePanel dossierId={dossierId} />
+            {activeTab === "timeline" ? (
+              <Suspense
+                fallback={
+                  <div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+                    Loading timeline…
+                  </div>
+                }
+              >
+                <TimelinePanel dossierId={dossierId} />
+              </Suspense>
+            ) : null}
           </TabsContent>
         </Tabs>
 
