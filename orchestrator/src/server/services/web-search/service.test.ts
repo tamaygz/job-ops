@@ -129,7 +129,9 @@ describe("web-search/service", () => {
 
     expect(mocks.providersById.bing.search).toHaveBeenCalledWith(
       "job ops",
-      expect.objectContaining({ providers: ["bing", "bing", "brave", "searxng"] }),
+      expect.objectContaining({
+        providers: ["bing", "bing", "brave", "searxng"],
+      }),
     );
     expect(result).toEqual({
       results: [
@@ -201,5 +203,25 @@ describe("web-search/service", () => {
         error: { message: "boom" },
       }),
     );
+  });
+
+  it("records an outcome when a configured provider id is unknown", async () => {
+    const result = await runWebSearch("job ops", {
+      settings: {
+        ...defaultSettings,
+        providers: ["bing", "unknown-provider" as "bing"],
+      },
+    });
+
+    expect(result.failures).toContain(
+      "Unknown web search provider: unknown-provider",
+    );
+    expect(result.providerOutcomes).toContainEqual({
+      providerId: "unknown-provider",
+      displayName: "unknown-provider",
+      status: "failed",
+      resultCount: 0,
+      message: "Unknown web search provider: unknown-provider",
+    });
   });
 });

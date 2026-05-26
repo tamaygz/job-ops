@@ -40,9 +40,7 @@ function shouldRestoreLegacyWebSearchSource(input: {
   return configuredWebSearchProviders.length > 0;
 }
 
-export async function loadInvestigatorGatherSettings(): Promise<
-  InvestigatorGatherSettings
-> {
+export async function loadInvestigatorGatherSettings(): Promise<InvestigatorGatherSettings> {
   const [
     rawSourceProviders,
     rawPeopleProviders,

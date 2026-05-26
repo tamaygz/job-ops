@@ -1,7 +1,7 @@
+import type { WebSearchProvider, WebSearchProviderId } from "../types";
 import { bingProvider } from "./bing";
 import { braveProvider } from "./brave";
 import { searxngProvider } from "./searxng";
-import type { WebSearchProvider, WebSearchProviderId } from "../types";
 
 const PROVIDERS: WebSearchProvider[] = [
   bingProvider,

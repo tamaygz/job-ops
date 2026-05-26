@@ -1,6 +1,5 @@
 import { renderWithQueryClient } from "@client/test/renderWithQueryClient";
 import { fireEvent, screen } from "@testing-library/react";
-import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TimelinePanel } from "./TimelinePanel";
 

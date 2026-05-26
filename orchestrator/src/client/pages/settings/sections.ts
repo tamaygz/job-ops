@@ -1,6 +1,6 @@
 import {
-  sectionWorkspaceItemMatchesSearch,
   type SectionWorkspaceItem,
+  sectionWorkspaceItemMatchesSearch,
 } from "@client/components/section-workspace/SectionWorkspace";
 import type { UpdateSettingsInput } from "@shared/settings-schema.js";
 
