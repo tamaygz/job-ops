@@ -1509,7 +1509,9 @@ function rebuildInvestigatorTimelineEventsTable(): void {
 
   const timelineTableSql = (
     sqlite
-      .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`)
+      .prepare(
+        `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`,
+      )
       .get("investigator_timeline_events") as { sql?: string } | undefined
   )?.sql;
 
