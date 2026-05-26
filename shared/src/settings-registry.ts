@@ -14,13 +14,13 @@ import {
   type LlmProviderId,
   type LlmPurposeApiKeys,
   type LlmPurposeOverrides,
-  WEB_SEARCH_PROVIDER_VALUES,
-  type WebSearchProviderId,
   PDF_RENDERER_VALUES,
   type PdfRenderer,
   type ResumeProjectsSettings,
   TYPST_THEME_VALUES,
   type TypstTheme,
+  WEB_SEARCH_PROVIDER_VALUES,
+  type WebSearchProviderId,
 } from "./types/settings";
 
 function parseNonEmptyStringOrNull(raw: string | undefined): string | null {

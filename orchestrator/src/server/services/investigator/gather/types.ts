@@ -1,8 +1,5 @@
 import type { Logger } from "@infra/logger";
-import type {
-  InvestigatorDossier,
-  RunKind,
-} from "@shared/types";
+import type { InvestigatorDossier, RunKind } from "@shared/types";
 import type { RunProgressEvent } from "../runProgress";
 import type { InvestigatorGatherSettings } from "./settings";
 
@@ -21,6 +18,7 @@ export type InvestigatorGatherContext = {
   runKind: RunKind;
   dossier: InvestigatorDossier;
   seedContext: Record<string, unknown> | null;
+  researchQuestion: string | null;
   settings: InvestigatorGatherSettings;
   log: Logger;
   reportProgress: (event: RunProgressEvent) => void;

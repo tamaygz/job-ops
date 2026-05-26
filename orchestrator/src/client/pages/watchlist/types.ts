@@ -75,6 +75,8 @@ export interface WatchlistSourceDraftCardProps {
   newJobsCount: number;
   hasUnsavedChanges: boolean;
   isSaving: boolean;
+  createDossiers: boolean;
+  onCreateDossiersChange: (value: boolean) => void;
   onAddSource: () => void;
   onRemoveSource: (index: number) => void;
   onUpdateDraft: (

@@ -67,7 +67,8 @@ export async function findByDossier(
   opts: TimelineQueryOpts = {},
 ): Promise<InvestigatorTimelineEvent[]> {
   const tenantId = getActiveTenantId();
-  const limit = opts.limit == null ? undefined : Math.min(opts.limit, 200);
+  const defaultLimit = opts.runId != null ? undefined : 50;
+  const limit = opts.limit == null ? defaultLimit : Math.min(opts.limit, 200);
 
   const conditions = [
     eq(investigatorTimelineEvents.tenantId, tenantId),

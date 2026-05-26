@@ -528,6 +528,7 @@ export interface UpdateWatchlistSelectionsInput {
     label?: string | null;
     careersUrl: string;
   }>;
+  createDossiers?: boolean;
 }
 
 export interface UpdateJobInput {

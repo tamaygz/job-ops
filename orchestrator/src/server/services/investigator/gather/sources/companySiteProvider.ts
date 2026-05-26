@@ -1,3 +1,5 @@
+import { logger } from "@infra/logger";
+import { sanitizeError } from "@infra/sanitize";
 import * as sourceService from "@server/services/investigator/sourceService";
 import * as timelineService from "@server/services/investigator/timelineService";
 import { buildCompanySiteCandidateUrls } from "@server/services/investigator/urlUtils";
@@ -5,6 +7,8 @@ import { isLocalOrPrivateHostname } from "@server/services/tracer-links";
 import type { InvestigatorProvider } from "../types";
 import { fetchPageText, isBlockedHost } from "../utils/html";
 import { truncateText } from "../utils/text";
+
+const log = logger.child({ source: "companySiteProvider" });
 
 const MAX_EXCERPT_CHARS = 8000;
 const MIN_TEXT_CHARS = 200;
@@ -79,7 +83,15 @@ export const companySiteProvider: InvestigatorProvider = {
           },
           { runId: context.runId },
         )
-        .catch(() => {});
+        .catch((err: unknown) => {
+          log.warn("Failed to record url_fetched timeline event", {
+            dossierId: context.dossierId,
+            url,
+            error: sanitizeError(
+              err instanceof Error ? err : new Error(String(err)),
+            ),
+          });
+        });
 
       if (!content || content.text.length < MIN_TEXT_CHARS) continue;
 

@@ -1,8 +1,12 @@
+import { logger } from "@infra/logger";
+import { sanitizeError } from "@infra/sanitize";
 import * as sourceService from "@server/services/investigator/sourceService";
 import * as timelineService from "@server/services/investigator/timelineService";
 import { runWebSearch } from "@server/services/web-search/service";
 import type { InvestigatorProvider } from "../types";
 import { truncateText } from "../utils/text";
+
+const log = logger.child({ source: "webSearchProvider" });
 
 const MAX_EXCERPT_CHARS = 1200;
 
@@ -61,7 +65,14 @@ export const webSearchProvider: InvestigatorProvider = {
         },
         { runId: context.runId },
       )
-      .catch(() => {});
+      .catch((err: unknown) => {
+        log.warn("Failed to record search_queried timeline event", {
+          dossierId: context.dossierId,
+          error: sanitizeError(
+            err instanceof Error ? err : new Error(String(err)),
+          ),
+        });
+      });
 
     if (search.providersAttempted === 0) {
       return {

@@ -32,6 +32,7 @@ export async function runInvestigatorPhases(args: {
   runKind: RunKind;
   dossier: InvestigatorDossier;
   seedContext: Record<string, unknown> | null;
+  researchQuestion: string | null;
 }): Promise<RunPhaseResult> {
   const settings = await loadInvestigatorGatherSettings();
 
@@ -41,6 +42,7 @@ export async function runInvestigatorPhases(args: {
     runKind: args.runKind,
     dossier: args.dossier,
     seedContext: args.seedContext,
+    researchQuestion: args.researchQuestion,
     settings,
     log: logger.child({
       service: "investigatorGather",

@@ -129,7 +129,9 @@ describe("web-search/service", () => {
 
     expect(mocks.providersById.bing.search).toHaveBeenCalledWith(
       "job ops",
-      expect.objectContaining({ providers: ["bing", "bing", "brave", "searxng"] }),
+      expect.objectContaining({
+        providers: ["bing", "bing", "brave", "searxng"],
+      }),
     );
     expect(result).toEqual({
       results: [

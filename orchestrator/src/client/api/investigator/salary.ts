@@ -41,7 +41,7 @@ export function deleteObservation(
   return fetchApi<void>(
     `/investigator/dossiers/${dossierId}/salary-observations/${id}`,
     {
-    method: "DELETE",
+      method: "DELETE",
     },
   );
 }

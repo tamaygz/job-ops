@@ -29,8 +29,8 @@ import { ReactiveResumeSection } from "@client/pages/settings/components/Reactiv
 import { ScoringSettingsSection } from "@client/pages/settings/components/ScoringSettingsSection";
 import { TracerLinksSettingsSection } from "@client/pages/settings/components/TracerLinksSettingsSection";
 import { TypstStyleSettingsSection } from "@client/pages/settings/components/TypstStyleSettingsSection";
-import { WebSearchSettingsSection } from "@client/pages/settings/components/WebSearchSettingsSection";
 import { WebhooksSection } from "@client/pages/settings/components/WebhooksSection";
+import { WebSearchSettingsSection } from "@client/pages/settings/components/WebSearchSettingsSection";
 import {
   type LlmProviderId,
   normalizeLlmProvider,
@@ -76,7 +76,6 @@ import {
   SECTION_FIELD_MAP,
   SETTINGS_NAV_GROUPS,
   type SettingsGroupId,
-  type SettingsSectionDescriptor,
   type SettingsSectionId,
 } from "./sections";
 
@@ -326,8 +325,7 @@ const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
   scoringPromptTemplate: data.scoringPromptTemplate.value ?? "",
   investigatorSummarySystemPromptTemplate:
     data.investigatorSummarySystemPromptTemplate.override ?? "",
-  investigatorSummarySourceLimit:
-    data.investigatorSummarySourceLimit.override,
+  investigatorSummarySourceLimit: data.investigatorSummarySourceLimit.override,
   investigatorSummaryExcerptMaxChars:
     data.investigatorSummaryExcerptMaxChars.override,
   webSearchProviders:
@@ -640,10 +638,8 @@ const getDerivedSettings = (settings: AppSettings | null) => {
         default: settings?.investigatorSummarySourceLimit?.default ?? 10,
       },
       excerptMaxChars: {
-        effective:
-          settings?.investigatorSummaryExcerptMaxChars?.value ?? 500,
-        default:
-          settings?.investigatorSummaryExcerptMaxChars?.default ?? 500,
+        effective: settings?.investigatorSummaryExcerptMaxChars?.value ?? 500,
+        default: settings?.investigatorSummaryExcerptMaxChars?.default ?? 500,
       },
     },
     webSearch: {
@@ -1440,7 +1436,8 @@ export const SettingsPage: React.FC = () => {
   }, [activeSection, visibleSectionIds]);
 
   const activeSectionMeta =
-    findSettingsSectionDescriptor(activeSection) ?? SETTINGS_NAV_GROUPS[0].items[0];
+    findSettingsSectionDescriptor(activeSection) ??
+    SETTINGS_NAV_GROUPS[0].items[0];
   const activeGroup =
     findSettingsGroupBySection(activeSection) ?? SETTINGS_NAV_GROUPS[0];
 
