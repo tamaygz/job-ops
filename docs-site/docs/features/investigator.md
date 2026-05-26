@@ -170,6 +170,110 @@ Investigator does **not** collect, store, or process:
 
 All data is stored locally in your self-hosted JobOps instance and is never sent to external services except as part of a research run (where only the company name and URL are used as seed context).
 
+## Data retrieval flows
+
+Research runs go through phases. Each phase uses specific providers to collect data. Not all phases run for every run kind, and not all providers do external fetching.
+
+### Run kinds and phases
+
+| Run kind | sources | people | salary | summary |
+|---|---|---|---|---|
+| **Company Brief** | ✓ | — | — | ✓ |
+| **People Scan** | ✓ | ✓ | — | ✓ |
+| **Dossier Refresh** | ✓ | ✓ | ✓ | ✓ |
+
+### Sources phase — the only non-LLM external retrieval phase
+
+The sources phase is the only non-LLM phase that makes outbound network requests. It runs up to three providers in sequence:
+
+| Provider | ID | Retrieval mode | What it does | Timeline event |
+|---|---|---|---|---|
+| **Linked jobs** | `linked_jobs` | Internal (DB) | Reads jobs already linked to the dossier and saves their metadata as sources. No external network calls. | `source_saved` |
+| **Company site** | `company_site` | Direct HTTP fetch | Fetches the dossier's company URL plus common subpaths (`/about`, `/about-us`, `/company`, `/team`, `/careers`, `/jobs`, `/contact`). Extracts page text and saves as sources. | `url_fetched` per page, then `source_saved` |
+| **Web search** | `web_search` | Web search APIs | Queries external search providers (Bing, Brave, SearXNG) for the company name. Saves search result snippets as sources. | `search_queried` with per-provider outcomes, then `source_saved` per result |
+
+All three are enabled by default. You can change which providers run in **Settings → Investigator → Source providers**.
+
+### People phase (internal only)
+
+Parses already-saved source text for people names and titles. No external network calls. Uses:
+
+- **Source text extraction** (`source_text`): regex-based extraction of person candidates from source excerpts.
+
+### Salary phase (internal only)
+
+Extracts salary data from existing sources. No external network calls. Uses:
+
+- **Job metadata** (`job_metadata`): reads salary fields from linked jobs in the database.
+- **Source text extraction** (`source_text`): regex-based extraction of salary ranges from source excerpts.
+
+### Summary phase (LLM call)
+
+Generates AI summaries from accepted sources. Sends source excerpts to your configured LLM provider. No web search or scraping. Summary types depend on run kind:
+
+- Company Brief → `company_brief`, `interview_angles`
+- People Scan → `people_brief`
+- Dossier Refresh → all three
+
+## Configuring web search
+
+Web search is the most powerful source provider, but it **requires API credentials** to work. Without credentials, every configured search provider is skipped and the run still completes — it just has fewer sources (with skip status visible in the `search_queried` event payload).
+
+### Supported search providers
+
+| Provider | Setting key | Required credential | How to get it |
+|---|---|---|---|
+| **Bing** | `webSearchProviders: ["bing"]` | Bing API key | [Azure Cognitive Services](https://portal.azure.com/) → create a Bing Search v7 resource |
+| **Brave** | `webSearchProviders: ["brave"]` | Brave API key | [Brave Search API](https://brave.com/search/api/) → sign up for a plan |
+| **SearXNG** | `webSearchProviders: ["searxng"]` | SearXNG base URL | Self-host a [SearXNG](https://docs.searxng.org/) instance, then set the base URL |
+
+The default configuration uses only Bing. Without a Bing API key set, web search is effectively disabled.
+
+### Setting up web search
+
+**Via Settings UI:**
+
+1. Go to **Settings → Web Search**.
+2. Check which providers you want to enable (Bing, Brave, SearXNG).
+3. Enter the API key or base URL for each enabled provider.
+4. Optionally adjust the result limit (default 8) and market/locale (default `en-US`).
+5. Save.
+
+**Via environment variables:**
+
+| Variable | Provider |
+|---|---|
+| `WEB_SEARCH_BING_API_KEY` or `BING_SEARCH_API_KEY` | Bing |
+| `BRAVE_SEARCH_API_KEY` | Brave |
+| `SEARXNG_API_KEY` | SearXNG (optional; base URL still needed in settings) |
+
+### Verifying web search is working
+
+After configuring credentials:
+
+1. Create or open a dossier with a company name and URL.
+2. Start a **Company Brief** run.
+3. When the run completes, open the **Run Details** page.
+4. In the **Audit Trail** section, look for a **"Search queried"** event.
+5. The event payload shows:
+   - **Query**: the search query used (e.g., `Acme Corp site:acme.com`)
+   - **Result Count**: total deduplicated results across all providers
+   - **Providers**: per-provider status — each shows ✓ (success with count), ✗ (failed), or "skipped"
+
+If you only see `url_fetched` events (from the company site provider) but no `search_queried` event, it means the web search provider was **not enabled** or returned no results.
+
+If you see a `search_queried` event but all providers show "skipped", the credentials are missing. Check **Settings → Web Search** to verify the API key is set.
+
+### SearXNG — the free self-hosted option
+
+SearXNG is the only provider that does not require a paid API key. It is a metasearch engine that aggregates results from Google, Bing, DuckDuckGo, and dozens of other engines.
+
+To use it:
+
+1. Deploy a SearXNG instance (Docker recommended: `docker run -d -p 8080:8080 searxng/searxng`).
+2. In JobOps settings, add `searxng` to web search providers and set the base URL (e.g., `http://localhost:8080`).
+3. Optionally set a SearXNG API key if your instance requires authentication.
+
 ## Common problems
 
 ### Dossier is stale after a long gap
@@ -183,6 +287,12 @@ Research runs fetch the current state of public sources. If a dossier has not ha
 Some companies have limited public presence. A run with no results is not an error — it means no matching sources were found at run time.
 
 **Fix:** You can add sources manually via the Sources panel using a direct URL and excerpt.
+
+### Research run shows no web search results
+
+Web search requires API credentials. Without them, all search providers are skipped and only company-site and linked-job providers contribute sources (you'll see the skip statuses in the `search_queried` event payload when that event is emitted).
+
+**Fix:** Go to **Settings → Web Search** and configure at least one provider with valid credentials. See the [Configuring web search](#configuring-web-search) section above. The easiest free option is self-hosting a SearXNG instance.
 
 ### Two dossiers for the same company
 
