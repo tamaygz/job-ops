@@ -5,8 +5,6 @@ vi.mock("@server/repositories/investigatorDossierRepository", () => ({
 }));
 
 vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
-  insert: vi.fn(),
-  findByDossier: vi.fn(),
   timelineRepository: {
     insert: vi.fn(),
     findByDossier: vi.fn(),

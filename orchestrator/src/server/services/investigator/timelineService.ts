@@ -5,15 +5,15 @@ import { timelineRepository } from "@server/repositories/investigatorTimelineRep
 import {
   type InvestigatorTimelineEvent,
   TimelineEventType,
-  type TimelineEventType as TimelineEventTypeName,
+  type TimelineEventType as TimelineEventTypeValue,
 } from "@shared/types";
 
 function assertTimelineEventType(
   eventType: string,
-): asserts eventType is TimelineEventTypeName {
+): asserts eventType is TimelineEventTypeValue {
   if (
     !Object.values(TimelineEventType).includes(
-      eventType as TimelineEventTypeName,
+      eventType as TimelineEventTypeValue,
     )
   ) {
     throw badRequest("Invalid timeline event type", {
@@ -25,7 +25,7 @@ function assertTimelineEventType(
 
 export async function writeEvent(
   dossierId: string,
-  eventType: TimelineEventTypeName | string,
+  eventType: string,
   payload: Record<string, unknown>,
   opts?: { runId?: string | null; occurredAt?: number },
 ): Promise<void> {
@@ -51,7 +51,7 @@ export async function listEvents(
   opts?: {
     limit?: number;
     before?: number;
-    eventType?: TimelineEventTypeName;
+    eventType?: TimelineEventTypeValue;
     runId?: string;
   },
 ): Promise<InvestigatorTimelineEvent[]> {
