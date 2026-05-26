@@ -1,22 +1,17 @@
 import { PeoplePanel } from "@client/components/investigator/PeoplePanel";
 import { RunProgressPanel } from "@client/components/investigator/RunProgressPanel";
+import { activeInvestigatorRunStatuses } from "@client/components/investigator/runMetadata";
 import { SalaryPanel } from "@client/components/investigator/SalaryPanel";
 import { SourceReviewPanel } from "@client/components/investigator/SourceReviewPanel";
 import { SummaryPanel } from "@client/components/investigator/SummaryPanel";
-import { TimelinePanel } from "@client/components/investigator/TimelinePanel";
-import {
-  activeInvestigatorRunStatuses,
-} from "@client/components/investigator/runMetadata";
 import { dossierStatusConfig } from "@client/components/investigator/statusConfig";
+import { TimelinePanel } from "@client/components/investigator/TimelinePanel";
 import { PageHeader, PageMain } from "@client/components/layout";
 import {
   useDossier,
   useRuns,
 } from "@client/hooks/queries/useInvestigatorQueries";
 import { showErrorToast } from "@client/lib/error-toast";
-import type {
-  InvestigatorResearchRun,
-} from "@shared/types";
 import {
   ArrowLeft,
   Building2,
@@ -91,7 +86,9 @@ export const InvestigatorDetailPage: React.FC = () => {
     ? (dossierStatusConfig[dossier.status] ?? dossierStatusConfig.active)
     : null;
 
-  const activeRun = runs?.find((r) => activeInvestigatorRunStatuses.has(r.status));
+  const activeRun = runs?.find((r) =>
+    activeInvestigatorRunStatuses.has(r.status),
+  );
 
   const handleArchive = async () => {
     if (!dossier) return;

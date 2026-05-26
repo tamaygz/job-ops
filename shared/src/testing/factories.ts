@@ -265,9 +265,9 @@ export const createAppSettings = (
     },
     investigatorSummarySystemPromptTemplate: {
       value:
-        "You are an expert business intelligence analyst. Return a JSON object with exactly three keys: \"summary\" (detailed markdown analysis), \"facts\" (string array of verifiable claims extracted from the sources), \"hypotheses\" (string array of plausible inferences not directly stated in the sources).",
+        'You are an expert business intelligence analyst. Return a JSON object with exactly three keys: "summary" (detailed markdown analysis), "facts" (string array of verifiable claims extracted from the sources), "hypotheses" (string array of plausible inferences not directly stated in the sources).',
       default:
-        "You are an expert business intelligence analyst. Return a JSON object with exactly three keys: \"summary\" (detailed markdown analysis), \"facts\" (string array of verifiable claims extracted from the sources), \"hypotheses\" (string array of plausible inferences not directly stated in the sources).",
+        'You are an expert business intelligence analyst. Return a JSON object with exactly three keys: "summary" (detailed markdown analysis), "facts" (string array of verifiable claims extracted from the sources), "hypotheses" (string array of plausible inferences not directly stated in the sources).',
       override: null,
     },
     investigatorSummarySourceLimit: {

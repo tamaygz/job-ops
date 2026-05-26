@@ -470,12 +470,13 @@ watchlistRouter.put(
       try {
         await ensureDossiersForCompanies(companies);
       } catch (err) {
-        const sanitizedErr = sanitizeError(
-          err instanceof Error ? err : new Error(String(err)),
-        );
         log.error(
           "Failed to create investigator dossiers after saving watchlist sources",
-          { error: sanitizedErr },
+          {
+            error: sanitizeError(
+              err instanceof Error ? err : new Error(String(err)),
+            ),
+          },
         );
       }
     }

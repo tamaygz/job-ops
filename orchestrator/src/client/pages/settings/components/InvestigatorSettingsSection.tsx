@@ -27,8 +27,8 @@ export const InvestigatorSettingsSection: React.FC<
     >
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Configure how dossier summaries choose supporting evidence and how
-          the investigator summary prompt is framed.
+          Configure how dossier summaries choose supporting evidence and how the
+          investigator summary prompt is framed.
         </p>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -120,7 +120,10 @@ export const InvestigatorSettingsSection: React.FC<
                   summaries.
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Current: <span className="font-mono">{values.systemPromptTemplate.effective}</span>
+                  Current:{" "}
+                  <span className="font-mono">
+                    {values.systemPromptTemplate.effective}
+                  </span>
                 </div>
               </div>
             )}

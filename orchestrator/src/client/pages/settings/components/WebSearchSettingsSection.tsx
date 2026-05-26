@@ -91,6 +91,7 @@ export const WebSearchSettingsSection: React.FC<
             {PROVIDER_OPTIONS.map((provider) => {
               const checked = selectedProviders.includes(provider.id);
               return (
+                // biome-ignore lint/a11y/noLabelWithoutControl: Checkbox renders a button role, label wraps it for click target
                 <label
                   key={provider.id}
                   className="flex items-start gap-2 rounded-md border border-border px-3 py-2 text-sm"
@@ -126,7 +127,8 @@ export const WebSearchSettingsSection: React.FC<
             })}
           </div>
           <div className="text-xs text-muted-foreground">
-            Effective: {values.providers.effective.join(", ") || "none"} | Default: {values.providers.default.join(", ") || "none"}
+            Effective: {values.providers.effective.join(", ") || "none"} |
+            Default: {values.providers.default.join(", ") || "none"}
           </div>
         </div>
 
@@ -297,12 +299,15 @@ export const WebSearchSettingsSection: React.FC<
               )}
             />
             <div className="space-y-2">
-              <label className="text-sm font-medium">Brave Notes</label>
+              <span className="text-sm font-medium">Brave Notes</span>
               <div className="text-xs text-muted-foreground">
                 Brave Search requires a subscription token. Keep your result
                 limit within 1-20 for best compatibility.
               </div>
-              <Input disabled value="https://api.search.brave.com/res/v1/web/search" />
+              <Input
+                disabled
+                value="https://api.search.brave.com/res/v1/web/search"
+              />
             </div>
           </div>
         </div>
