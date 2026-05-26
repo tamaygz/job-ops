@@ -282,7 +282,7 @@ export function subscribeToSettingsLogStream(handlers: {
   onError?: () => void;
 }): () => void {
   return subscribeToEventSource<SettingsLogStreamEvent>(
-    `/api${normalizeApiPath("/settings/logs/stream")}`,
+    "/api/settings/logs/stream",
     handlers,
   );
 }
