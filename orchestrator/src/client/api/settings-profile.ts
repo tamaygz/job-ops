@@ -15,8 +15,8 @@ import type {
   SearchTermsSuggestionResponse,
   ValidationResult,
 } from "@shared/types";
-import type { CodexAuthStatusResponse } from "./auth";
 import { subscribeToEventSource } from "../lib/sse";
+import type { CodexAuthStatusResponse } from "./auth";
 import { fetchApi, fetchBlobApi, normalizeApiPath } from "./core";
 
 export type SettingsLogEntry = {
@@ -282,7 +282,7 @@ export function subscribeToSettingsLogStream(handlers: {
   onError?: () => void;
 }): () => void {
   return subscribeToEventSource<SettingsLogStreamEvent>(
-    normalizeApiPath("/settings/logs/stream"),
+    `/api${normalizeApiPath("/settings/logs/stream")}`,
     handlers,
   );
 }
