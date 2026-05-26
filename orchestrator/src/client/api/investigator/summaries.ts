@@ -1,7 +1,4 @@
-import type {
-  InvestigatorSummary,
-  RegenerateInvestigatorSummaryInput,
-} from "@shared/types";
+import type { InvestigatorSummary, SummaryType } from "@shared/types";
 import { fetchApi, withQuery } from "../core";
 
 export function listSummaries(
@@ -17,11 +14,12 @@ export function listSummaries(
 
 export function regenerateSummary(
   dossierId: string,
-  input: RegenerateInvestigatorSummaryInput,
+  type: SummaryType,
+  runId: string | null = null,
 ): Promise<InvestigatorSummary> {
   return fetchApi<InvestigatorSummary>(
     `/investigator/dossiers/${dossierId}/summaries/regenerate`,
-    { method: "POST", body: JSON.stringify(input) },
+    { method: "POST", body: JSON.stringify({ summaryType: type, runId }) },
   );
 }
 
