@@ -45,16 +45,16 @@ import { StartRunDialog } from "./detail/StartRunDialog";
 // ---------------------------------------------------------------------------
 
 type ActiveTab = "summary" | "sources" | "people" | "salary" | "timeline";
-const SourceReviewPanel = lazy(async () => {
-  const module = await import(
-    "@client/components/investigator/SourceReviewPanel"
-  );
-  return { default: module.SourceReviewPanel };
-});
-const TimelinePanel = lazy(async () => {
-  const module = await import("@client/components/investigator/TimelinePanel");
-  return { default: module.TimelinePanel };
-});
+const SourceReviewPanel = lazy(() =>
+  import("@client/components/investigator/SourceReviewPanel").then((module) => ({
+    default: module.SourceReviewPanel,
+  })),
+);
+const TimelinePanel = lazy(() =>
+  import("@client/components/investigator/TimelinePanel").then((module) => ({
+    default: module.TimelinePanel,
+  })),
+);
 
 export const InvestigatorDetailPage: React.FC = () => {
   const { dossierId = "" } = useParams<{ dossierId: string }>();
