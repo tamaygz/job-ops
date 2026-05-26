@@ -8,8 +8,8 @@ const mocks = vi.hoisted(() => ({
   updateStatus: vi.fn(),
   // dossierRepo
   findDossierById: vi.fn(),
-  // timelineRepo
-  insertEvent: vi.fn(),
+  // timelineService
+  writeEvent: vi.fn(),
   // queue
   enqueue: vi.fn(),
   reserveNext: vi.fn(),
@@ -32,8 +32,8 @@ vi.mock("@server/repositories/investigatorDossierRepository", () => ({
   findById: mocks.findDossierById,
 }));
 
-vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
-  insertEvent: mocks.insertEvent,
+vi.mock("./timelineService", () => ({
+  writeEvent: mocks.writeEvent,
 }));
 
 vi.mock("@server/infra/job-queue-registry", () => ({
@@ -88,7 +88,7 @@ describe("runService", () => {
       acceptedAt: new Date().toISOString(),
       deduplicated: false,
     });
-    mocks.insertEvent.mockResolvedValue(undefined);
+    mocks.writeEvent.mockResolvedValue(undefined);
   });
 
   describe("startRun", () => {
@@ -149,8 +149,11 @@ describe("runService", () => {
           dedupeKey: "tenant-test:dossier-unit-001:company_brief",
         },
       );
-      expect(mocks.insertEvent).toHaveBeenCalledWith(
-        expect.objectContaining({ eventType: "run_started", runId: RUN_ID }),
+      expect(mocks.writeEvent).toHaveBeenCalledWith(
+        DOSSIER_ID,
+        "run_started",
+        expect.objectContaining({ runId: RUN_ID }),
+        expect.objectContaining({ runId: RUN_ID }),
       );
       expect(mocks.scheduleResearchRunWorker).toHaveBeenCalledOnce();
     });
@@ -216,7 +219,7 @@ describe("runService", () => {
           errorMessage: "Deduplicated by queued run existing-queued-job",
         }),
       );
-      expect(mocks.insertEvent).not.toHaveBeenCalled();
+      expect(mocks.writeEvent).not.toHaveBeenCalled();
       expect(mocks.scheduleResearchRunWorker).not.toHaveBeenCalled();
     });
   });
@@ -271,11 +274,11 @@ describe("runService", () => {
 
       expect(result.status).toBe("cancelled");
       expect(mocks.updateStatus).toHaveBeenCalledWith(RUN_ID, "cancelled");
-      expect(mocks.insertEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          eventType: "run_failed",
-          payload: expect.objectContaining({ reason: "user_cancelled" }),
-        }),
+      expect(mocks.writeEvent).toHaveBeenCalledWith(
+        DOSSIER_ID,
+        "run_failed",
+        expect.objectContaining({ reason: "user_cancelled" }),
+        expect.objectContaining({ runId: RUN_ID }),
       );
     });
 

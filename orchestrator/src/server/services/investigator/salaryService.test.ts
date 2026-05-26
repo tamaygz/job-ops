@@ -12,15 +12,15 @@ vi.mock("@server/repositories/investigatorSalaryRepository", () => ({
   findByDossier: vi.fn(),
 }));
 
-vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
-  insertEvent: vi.fn(),
+vi.mock("./timelineService", () => ({
+  writeEvent: vi.fn(),
 }));
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as salaryRepo from "@server/repositories/investigatorSalaryRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import type { InvestigatorDossier } from "@shared/types";
 import { createObservation, updateObservation } from "./salaryService";
+import * as timelineService from "./timelineService";
 
 function makeDossier(): InvestigatorDossier {
   return {
@@ -108,8 +108,11 @@ describe("salaryService", () => {
       observedAt: 123,
     });
 
-    expect(timelineRepo.insertEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ eventType: "salary_saved" }),
+    expect(timelineService.writeEvent).toHaveBeenCalledWith(
+      "dossier-1",
+      "salary_saved",
+      { observationId: "obs-1" },
+      expect.objectContaining({ occurredAt: expect.any(Number) }),
     );
 
     await expect(

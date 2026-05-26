@@ -3,7 +3,6 @@ import { notFound } from "@infra/errors";
 import { logger } from "@infra/logger";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as sourceRepo from "@server/repositories/investigatorSourceRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import type {
   CreateInvestigatorSourceInput,
   InvestigatorSource,
@@ -11,6 +10,7 @@ import type {
   SourceType,
   UpdateInvestigatorSourceInput,
 } from "@shared/types";
+import { writeEvent } from "./timelineService";
 
 const log = logger.child({ service: "sourceService" });
 
@@ -72,13 +72,12 @@ export async function saveSource(
     contentHash,
   });
 
-  await timelineRepo.insertEvent({
+  await writeEvent(
     dossierId,
-    runId: input.runId ?? null,
-    eventType: "source_saved",
-    payload: { sourceId: source.id, sourceType: source.sourceType },
-    occurredAt: nowSeconds(),
-  });
+    "source_saved",
+    { sourceId: source.id, sourceType: source.sourceType },
+    { runId: input.runId ?? null, occurredAt: nowSeconds() },
+  );
 
   log.info("Source saved", {
     dossierId,
@@ -117,16 +116,16 @@ export async function updateSource(
   }
 
   if (reviewStateChanged) {
-    await timelineRepo.insertEvent({
-      dossierId: existing.dossierId,
-      eventType: "source_reviewed",
-      payload: {
+    await writeEvent(
+      existing.dossierId,
+      "source_reviewed",
+      {
         sourceId,
         sourceType: updated.sourceType,
         reviewState: updated.reviewState,
       },
-      occurredAt: nowSeconds(),
-    });
+      { occurredAt: nowSeconds() },
+    );
   }
 
   log.info("Source updated", {

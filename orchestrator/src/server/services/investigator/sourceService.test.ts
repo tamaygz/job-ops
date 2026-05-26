@@ -25,15 +25,15 @@ vi.mock("@server/repositories/investigatorSourceRepository", () => ({
   findByDossier: vi.fn(),
 }));
 
-vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
-  insertEvent: vi.fn(),
+vi.mock("./timelineService", () => ({
+  writeEvent: vi.fn(),
 }));
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as sourceRepo from "@server/repositories/investigatorSourceRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import type { InvestigatorDossier } from "@shared/types";
 import { saveSource, updateSource } from "./sourceService";
+import * as timelineService from "./timelineService";
 
 function makeDossier(): InvestigatorDossier {
   return {
@@ -87,7 +87,7 @@ describe("sourceService", () => {
 
     expect(result.deduplicated).toBe(true);
     expect(sourceRepo.create).not.toHaveBeenCalled();
-    expect(timelineRepo.insertEvent).not.toHaveBeenCalled();
+    expect(timelineService.writeEvent).not.toHaveBeenCalled();
   });
 
   it("creates a source with a derived host and logs review transitions", async () => {
@@ -156,22 +156,24 @@ describe("sourceService", () => {
     expect(sourceRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({ sourceHost: "careers.acme.test" }),
     );
-    expect(timelineRepo.insertEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ eventType: "source_saved" }),
+    expect(timelineService.writeEvent).toHaveBeenCalledWith(
+      "dossier-1",
+      "source_saved",
+      expect.any(Object),
+      expect.objectContaining({ occurredAt: expect.any(Number) }),
     );
 
     await updateSource("source-2", { reviewState: "verified" });
 
-    expect(timelineRepo.insertEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        dossierId: "dossier-1",
-        eventType: "source_reviewed",
-        payload: {
-          sourceId: "source-2",
-          sourceType: "company_site",
-          reviewState: "verified",
-        },
-      }),
+    expect(timelineService.writeEvent).toHaveBeenCalledWith(
+      "dossier-1",
+      "source_reviewed",
+      {
+        sourceId: "source-2",
+        sourceType: "company_site",
+        reviewState: "verified",
+      },
+      expect.objectContaining({ occurredAt: expect.any(Number) }),
     );
   });
 });

@@ -1,12 +1,12 @@
 import { notFound } from "@infra/errors";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as peopleRepo from "@server/repositories/investigatorPeopleRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import type {
   CreateInvestigatorPersonInput,
   InvestigatorPerson,
   UpdateInvestigatorPersonInput,
 } from "@shared/types";
+import { writeEvent } from "./timelineService";
 
 export async function createPerson(
   dossierId: string,
@@ -28,13 +28,12 @@ export async function createPerson(
     sourceIds: input.sourceIds ?? [],
   });
 
-  await timelineRepo.insertEvent({
+  await writeEvent(
     dossierId,
-    runId: input.runId ?? null,
-    eventType: "person_saved",
-    payload: { personId: person.id, fullName: person.fullName },
-    occurredAt: Math.floor(Date.now() / 1000),
-  });
+    "person_saved",
+    { personId: person.id, fullName: person.fullName },
+    { runId: input.runId ?? null, occurredAt: Math.floor(Date.now() / 1000) },
+  );
 
   return person;
 }
@@ -63,13 +62,12 @@ export async function updatePerson(
     throw notFound("Person not found");
   }
 
-  await timelineRepo.insertEvent({
-    dossierId: existing.dossierId,
-    runId: existing.runId,
-    eventType: "person_saved",
-    payload: { personId: updated.id, fullName: updated.fullName },
-    occurredAt: Math.floor(Date.now() / 1000),
-  });
+  await writeEvent(
+    existing.dossierId,
+    "person_saved",
+    { personId: updated.id, fullName: updated.fullName },
+    { runId: existing.runId, occurredAt: Math.floor(Date.now() / 1000) },
+  );
 
   return updated;
 }

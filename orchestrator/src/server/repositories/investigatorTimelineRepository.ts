@@ -51,17 +51,6 @@ export async function insert(data: {
   });
 }
 
-/** Backwards-compatible alias used by existing services. */
-export async function insertEvent(data: {
-  dossierId: string;
-  runId?: string | null;
-  eventType: TimelineEventType;
-  payload: Record<string, unknown>;
-  occurredAt: number;
-}): Promise<void> {
-  return insert(data);
-}
-
 export async function findByDossier(
   dossierId: string,
   opts: TimelineQueryOpts = {},
@@ -97,3 +86,8 @@ export async function findByDossier(
 
   return rows.map(mapRow);
 }
+
+export const timelineRepository = {
+  insert,
+  findByDossier,
+};

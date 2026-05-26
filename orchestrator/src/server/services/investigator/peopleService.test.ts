@@ -12,14 +12,14 @@ vi.mock("@server/repositories/investigatorPeopleRepository", () => ({
   findByDossier: vi.fn(),
 }));
 
-vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
-  insertEvent: vi.fn(),
+vi.mock("./timelineService", () => ({
+  writeEvent: vi.fn(),
 }));
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as peopleRepo from "@server/repositories/investigatorPeopleRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import { createPerson, updatePerson } from "./peopleService";
+import * as timelineService from "./timelineService";
 
 describe("peopleService", () => {
   afterEach(() => {
@@ -74,13 +74,11 @@ describe("peopleService", () => {
 
     await updatePerson("person-1", { fullName: "Taylor Architect" });
 
-    expect(timelineRepo.insertEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        dossierId: "dossier-1",
-        runId: "run-1",
-        eventType: "person_saved",
-        payload: { personId: "person-1", fullName: "Taylor Architect" },
-      }),
+    expect(timelineService.writeEvent).toHaveBeenCalledWith(
+      "dossier-1",
+      "person_saved",
+      { personId: "person-1", fullName: "Taylor Architect" },
+      expect.objectContaining({ runId: "run-1" }),
     );
   });
 });

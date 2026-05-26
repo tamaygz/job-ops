@@ -11,8 +11,8 @@ vi.mock("@server/repositories/investigatorDossierRepository", () => ({
   update: vi.fn(),
 }));
 
-vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
-  insert: vi.fn(),
+vi.mock("./timelineService", () => ({
+  writeEvent: vi.fn(),
 }));
 
 vi.mock("@server/repositories/jobs", () => ({
@@ -20,12 +20,12 @@ vi.mock("@server/repositories/jobs", () => ({
 }));
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import {
   ensureDossiersForCompanies,
   normalizeCanonicalKey,
   updateDossier,
 } from "./dossierService";
+import * as timelineService from "./timelineService";
 
 describe("normalizeCanonicalKey", () => {
   it("strips punctuation and lowercases", () => {
@@ -185,11 +185,11 @@ describe("updateDossier", () => {
     await updateDossier("dossier-1", { status: "archived" });
 
     expect(dossierRepo.findById).toHaveBeenCalledWith("dossier-1");
-    expect(timelineRepo.insert).toHaveBeenCalledWith(
+    expect(timelineService.writeEvent).toHaveBeenCalledWith(
+      "dossier-1",
+      "status_changed",
+      { from: "active", to: "archived" },
       expect.objectContaining({
-        dossierId: "dossier-1",
-        eventType: "status_changed",
-        payload: { from: "active", to: "archived" },
         occurredAt: expect.any(Number),
       }),
     );
@@ -225,7 +225,7 @@ describe("ensureDossiersForCompanies", () => {
 
     expect(result).toEqual({ created: 0, skipped: 1 });
     expect(dossierRepo.create).not.toHaveBeenCalled();
-    expect(timelineRepo.insert).not.toHaveBeenCalled();
+    expect(timelineService.writeEvent).not.toHaveBeenCalled();
   });
 
   it("creates a new dossier and writes a timeline event for an unknown company", async () => {
@@ -249,15 +249,15 @@ describe("ensureDossiersForCompanies", () => {
         status: "watchlist",
       }),
     );
-    expect(timelineRepo.insert).toHaveBeenCalledWith(
+    expect(timelineService.writeEvent).toHaveBeenCalledWith(
+      "new-dossier",
+      "dossier_created",
       expect.objectContaining({
-        dossierId: "new-dossier",
-        eventType: "dossier_created",
-        payload: expect.objectContaining({
-          companyName: "Beta Corp",
-          canonicalKey: "beta corp",
-          source: "watchlist",
-        }),
+        companyName: "Beta Corp",
+        canonicalKey: "beta corp",
+        source: "watchlist",
+      }),
+      expect.objectContaining({
         occurredAt: expect.any(Number),
       }),
     );
@@ -295,7 +295,7 @@ describe("ensureDossiersForCompanies", () => {
     ]);
 
     expect(result).toEqual({ created: 0, skipped: 1 });
-    expect(timelineRepo.insert).not.toHaveBeenCalled();
+    expect(timelineService.writeEvent).not.toHaveBeenCalled();
   });
 
   it("re-throws non-UNIQUE errors", async () => {

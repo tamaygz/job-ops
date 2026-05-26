@@ -1,12 +1,12 @@
 import { badRequest, notFound } from "@infra/errors";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as salaryRepo from "@server/repositories/investigatorSalaryRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import type {
   CreateInvestigatorSalaryObservationInput,
   InvestigatorSalaryObservation,
   UpdateInvestigatorSalaryObservationInput,
 } from "@shared/types";
+import { writeEvent } from "./timelineService";
 
 function validateAmountRange(
   minAmount: number | null | undefined,
@@ -43,13 +43,12 @@ export async function createObservation(
     notes: input.notes ?? null,
   });
 
-  await timelineRepo.insertEvent({
+  await writeEvent(
     dossierId,
-    runId: input.runId ?? null,
-    eventType: "salary_saved",
-    payload: { observationId: obs.id },
-    occurredAt: Math.floor(Date.now() / 1000),
-  });
+    "salary_saved",
+    { observationId: obs.id },
+    { runId: input.runId ?? null, occurredAt: Math.floor(Date.now() / 1000) },
+  );
 
   return obs;
 }
