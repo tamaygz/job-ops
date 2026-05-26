@@ -6,7 +6,7 @@ import {
 } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import { logger } from "@infra/logger";
-import { sanitizeError } from "@infra/sanitize";
+import { sanitizeUnknown } from "@infra/sanitize";
 import { listCareerBoardSources } from "@server/config/career-boards";
 import * as jobsRepo from "@server/repositories/jobs";
 import * as watchlistRepo from "@server/repositories/watchlist";
@@ -472,7 +472,7 @@ watchlistRouter.put(
       } catch (err) {
         log.error(
           "Failed to create investigator dossiers after saving watchlist sources",
-          { error: err instanceof Error ? sanitizeError(err) : String(err) },
+          { error: sanitizeUnknown(err) },
         );
       }
     }

@@ -1,6 +1,6 @@
 import { conflict, notFound } from "@infra/errors";
 import { logger } from "@infra/logger";
-import { sanitizeError } from "@infra/sanitize";
+import { sanitizeUnknown } from "@infra/sanitize";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import * as jobsRepo from "@server/repositories/jobs";
@@ -290,10 +290,7 @@ export async function ensureDossiersForCompanies(
       } catch (timelineErr) {
         log.warn("Failed to write dossier_created timeline event", {
           dossierId: dossier.id,
-          error:
-            timelineErr instanceof Error
-              ? sanitizeError(timelineErr)
-              : String(timelineErr),
+          error: sanitizeUnknown(timelineErr),
         });
       }
     } catch (err) {
