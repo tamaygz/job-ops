@@ -68,19 +68,19 @@ describe.sequential("Dossier Merge API", () => {
 
   async function seedJob(): Promise<string> {
     const now = new Date().toISOString();
-    const jobId = `merge-test-job-${randomUUID()}`;
+    const testJobId = `merge-test-job-${randomUUID()}`;
     const { db, schema } = await import("@server/db");
     await db.insert(schema.jobs).values({
-      id: jobId,
+      id: testJobId,
       source: "manual",
-      title: `Merge Test Job ${jobId}`,
+      title: `Merge Test Job ${testJobId}`,
       employer: "Source Co",
-      jobUrl: `https://example.com/jobs/${jobId}`,
+      jobUrl: `https://example.com/jobs/${testJobId}`,
       createdAt: now,
       updatedAt: now,
       discoveredAt: now,
     });
-    return jobId;
+    return testJobId;
   }
 
   async function merge(

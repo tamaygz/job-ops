@@ -1208,9 +1208,9 @@ const migrations = [
   `CREATE INDEX IF NOT EXISTS idx_investigator_summaries_dossier_summary_type ON investigator_summaries(dossier_id, summary_type)`,
   `CREATE INDEX IF NOT EXISTS idx_investigator_timeline_events_dossier_occurred_at ON investigator_timeline_events(dossier_id, occurred_at)`,
   `CREATE INDEX IF NOT EXISTS idx_investigator_timeline_events_dossier_event_type ON investigator_timeline_events(dossier_id, event_type)`,
-  shouldAddInvestigatorDossiersArchivedAt
-    ? `ALTER TABLE investigator_dossiers ADD COLUMN archived_at TEXT`
-    : `SELECT 1`,
+  ...(shouldAddInvestigatorDossiersArchivedAt
+    ? [`ALTER TABLE investigator_dossiers ADD COLUMN archived_at TEXT`]
+    : []),
 ];
 
 console.log("🔧 Running database migrations...");
