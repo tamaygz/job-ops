@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import type { InvestigatorDossier, InvestigatorSource } from "@shared/types";
+import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startServer, stopServer } from "../test-utils";
 
@@ -16,9 +18,11 @@ describe.sequential("Dossier Merge API", () => {
   let baseUrl: string;
   let closeDb: () => void;
   let tempDir: string;
+  let seededJobCounter = 0;
 
   beforeEach(async () => {
     ({ server, baseUrl, closeDb, tempDir } = await startServer());
+    seededJobCounter = 0;
   });
 
   afterEach(async () => {
@@ -64,6 +68,24 @@ describe.sequential("Dossier Merge API", () => {
     return body.data;
   }
 
+  async function seedJob(): Promise<string> {
+    seededJobCounter += 1;
+    const now = new Date().toISOString();
+    const jobId = `merge-test-job-${seededJobCounter}`;
+    const { db, schema } = await import("@server/db");
+    await db.insert(schema.jobs).values({
+      id: jobId,
+      source: "manual",
+      title: `Merge Test Job ${jobId}`,
+      employer: "Source Co",
+      jobUrl: `https://example.com/jobs/${jobId}`,
+      createdAt: now,
+      updatedAt: now,
+      discoveredAt: now,
+    });
+    return jobId;
+  }
+
   async function merge(
     targetId: string,
     sourceId: string,
@@ -80,12 +102,68 @@ describe.sequential("Dossier Merge API", () => {
   // Success path
   // ---------------------------------------------------------------------------
 
-  it("merges source into target, archives source, and returns updated target", async () => {
+  it("merges source records into target and archives source dossier", async () => {
     const target = await createDossier("Target Co");
     const source = await createDossier("Source Co");
+    const { db, schema } = await import("@server/db");
+    const now = new Date().toISOString();
+    const nowSec = Math.floor(Date.now() / 1000);
 
-    // Add a source record on the source dossier.
     const sourceRecord = await addSource(source.id);
+    const linkedJobId = await seedJob();
+
+    await db.insert(schema.investigatorDossierJobs).values({
+      id: randomUUID(),
+      tenantId: "tenant_default",
+      dossierId: source.id,
+      jobId: linkedJobId,
+      linkReason: "manual",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.insert(schema.investigatorPeople).values({
+      id: randomUUID(),
+      tenantId: "tenant_default",
+      dossierId: source.id,
+      fullName: "Sam Recruiter",
+      personType: "recruiter",
+      confidenceLabel: "high",
+      sourceIds: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.insert(schema.investigatorSalaryObservations).values({
+      id: randomUUID(),
+      tenantId: "tenant_default",
+      dossierId: source.id,
+      confidenceLabel: "medium",
+      observedAt: nowSec,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.insert(schema.investigatorSummaries).values({
+      id: randomUUID(),
+      tenantId: "tenant_default",
+      dossierId: source.id,
+      summaryType: "company_brief",
+      title: "Source Summary",
+      bodyMarkdown: "Summary body",
+      factsJson: [],
+      hypothesesJson: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+    await db.insert(schema.investigatorTimelineEvents).values({
+      id: randomUUID(),
+      tenantId: "tenant_default",
+      dossierId: source.id,
+      runId: null,
+      eventType: "source_saved",
+      payload: { note: "before-merge" },
+      occurredAt: nowSec,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     const res = await merge(target.id, source.id);
     expect(res.status).toBe(200);
@@ -101,12 +179,58 @@ describe.sequential("Dossier Merge API", () => {
     };
     expect(sourceBody.data.status).toBe("archived");
 
-    // The source record should now belong to target.
+    const [sourceRow] = await db
+      .select({ archivedAt: schema.investigatorDossiers.archivedAt })
+      .from(schema.investigatorDossiers)
+      .where(eq(schema.investigatorDossiers.id, source.id));
+    expect(sourceRow?.archivedAt).toBeTruthy();
+
+    // Source-linked records should now belong to target.
     const sourcesRes = await fetch(dossiersUrl(`/${target.id}/sources`));
     const sourcesBody = (await sourcesRes.json()) as {
       data: InvestigatorSource[];
     };
     expect(sourcesBody.data.some((s) => s.id === sourceRecord.id)).toBe(true);
+
+    const targetDossierRes = await fetch(dossiersUrl(`/${target.id}`));
+    const targetDossierBody = (await targetDossierRes.json()) as {
+      data: { linkedJobs: Array<{ jobId: string }> };
+    };
+    expect(
+      targetDossierBody.data.linkedJobs.some((j) => j.jobId === linkedJobId),
+    ).toBe(true);
+
+    const movedPeople = await db
+      .select({ id: schema.investigatorPeople.id })
+      .from(schema.investigatorPeople)
+      .where(eq(schema.investigatorPeople.dossierId, target.id));
+    expect(movedPeople.length).toBeGreaterThan(0);
+
+    const movedSalary = await db
+      .select({ id: schema.investigatorSalaryObservations.id })
+      .from(schema.investigatorSalaryObservations)
+      .where(eq(schema.investigatorSalaryObservations.dossierId, target.id));
+    expect(movedSalary.length).toBeGreaterThan(0);
+
+    const movedSummaries = await db
+      .select({ id: schema.investigatorSummaries.id })
+      .from(schema.investigatorSummaries)
+      .where(eq(schema.investigatorSummaries.dossierId, target.id));
+    expect(movedSummaries.length).toBeGreaterThan(0);
+
+    const movedTimelineEvents = await db
+      .select({
+        id: schema.investigatorTimelineEvents.id,
+        eventType: schema.investigatorTimelineEvents.eventType,
+      })
+      .from(schema.investigatorTimelineEvents)
+      .where(
+        and(
+          eq(schema.investigatorTimelineEvents.dossierId, target.id),
+          eq(schema.investigatorTimelineEvents.eventType, "source_saved"),
+        ),
+      );
+    expect(movedTimelineEvents.length).toBeGreaterThan(0);
   });
 
   it("excludes archived dossiers from default list", async () => {

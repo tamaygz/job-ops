@@ -139,7 +139,7 @@ export async function mergeDossiers(
 
     // 9. Archive the source dossier.
     tx.update(investigatorDossiers)
-      .set({ status: "archived", updatedAt: now })
+      .set({ status: "archived", archivedAt: now, updatedAt: now })
       .where(
         and(
           eq(investigatorDossiers.tenantId, tenantId),
