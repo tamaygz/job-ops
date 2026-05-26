@@ -4,8 +4,8 @@ import type {
   CreateInvestigatorPersonInput,
   CreateInvestigatorSalaryObservationInput,
   CreateInvestigatorSourceInput,
-  RegenerateInvestigatorSummaryInput,
   StartInvestigatorRunInput,
+  SummaryType,
   UpdateInvestigatorDossierInput,
   UpdateInvestigatorPersonInput,
   UpdateInvestigatorSalaryObservationInput,
@@ -64,6 +64,9 @@ export function useLinkJob() {
     }) => investigatorApi.linkJob(dossierId, input),
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({
+        queryKey: queryKeys.investigator.linkedJobs(variables.dossierId),
+      });
+      await queryClient.invalidateQueries({
         queryKey: queryKeys.investigator.dossier(variables.dossierId),
       });
       await queryClient.invalidateQueries({
@@ -79,6 +82,9 @@ export function useUnlinkJob() {
     mutationFn: ({ dossierId, jobId }: { dossierId: string; jobId: string }) =>
       investigatorApi.unlinkJob(dossierId, jobId),
     onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.investigator.linkedJobs(variables.dossierId),
+      });
       await queryClient.invalidateQueries({
         queryKey: queryKeys.investigator.dossier(variables.dossierId),
       });
@@ -347,11 +353,13 @@ export function useRegenerateSummary() {
   return useMutation({
     mutationFn: ({
       dossierId,
-      input,
+      type,
+      runId,
     }: {
       dossierId: string;
-      input: RegenerateInvestigatorSummaryInput;
-    }) => investigatorApi.regenerateSummary(dossierId, input),
+      type: SummaryType;
+      runId?: string | null;
+    }) => investigatorApi.regenerateSummary(dossierId, type, runId ?? null),
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.investigator.summaries(variables.dossierId),

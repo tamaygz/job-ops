@@ -149,7 +149,8 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
     try {
       await regenerateMutation.mutateAsync({
         dossierId,
-        input: { summaryType, runId: null },
+        type: summaryType,
+        runId: null,
       });
     } catch (err) {
       showErrorToast(err, "Failed to regenerate summary");
