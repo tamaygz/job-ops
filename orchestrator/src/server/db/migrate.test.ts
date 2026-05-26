@@ -218,6 +218,100 @@ describe.sequential("database migrations", () => {
     );
   });
 
+  it("rebuilds legacy investigator timeline table to allow fetched/query events", async () => {
+    tempDir = await mkdtemp(join(tmpdir(), "job-ops-migrate-"));
+    const script = `
+      import { join } from "node:path";
+      import { pathToFileURL } from "node:url";
+      import Database from "better-sqlite3";
+
+      const dbPath = join(process.env.DATA_DIR, "jobs.db");
+      const sqlite = new Database(dbPath);
+      sqlite.exec(\`
+        CREATE TABLE tenants (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          slug TEXT NOT NULL UNIQUE,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO tenants(id, name, slug) VALUES ('tenant_default', 'JobOps', 'default');
+
+        CREATE TABLE investigator_timeline_events (
+          id TEXT PRIMARY KEY,
+          tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+          dossier_id TEXT NOT NULL,
+          run_id TEXT,
+          event_type TEXT NOT NULL CHECK(event_type IN ('dossier_created','job_linked','run_started','run_completed','run_partial_failed','run_failed','source_saved','source_reviewed','person_saved','salary_saved','summary_saved','status_changed','dossier_merged')),
+          payload TEXT NOT NULL,
+          occurred_at INTEGER NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+        );
+        INSERT INTO investigator_timeline_events(id, tenant_id, dossier_id, event_type, payload, occurred_at)
+          VALUES ('evt-legacy', 'tenant_default', 'dossier-1', 'run_started', '{}', 1);
+      \`);
+      sqlite.close();
+
+      await import(pathToFileURL(join(process.cwd(), "src/server/db/migrate.ts")).href);
+
+      const migratedDb = new Database(dbPath);
+      const existing = migratedDb
+        .prepare("SELECT event_type FROM investigator_timeline_events WHERE id = ?")
+        .get("evt-legacy");
+      if (!existing || existing.event_type !== "run_started") {
+        throw new Error("Existing investigator timeline event missing after migration");
+      }
+
+      migratedDb
+        .prepare(
+          "INSERT INTO investigator_timeline_events(id, tenant_id, dossier_id, event_type, payload, occurred_at) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .run("evt-new", "tenant_default", "dossier-1", "url_fetched", "{}", 2);
+
+      migratedDb
+        .prepare(
+          "INSERT INTO investigator_timeline_events(id, tenant_id, dossier_id, event_type, payload, occurred_at) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .run("evt-new-2", "tenant_default", "dossier-1", "search_queried", "{}", 3);
+
+      const indexes = migratedDb
+        .prepare("PRAGMA index_list(investigator_timeline_events)")
+        .all();
+      if (
+        !indexes.some(
+          (index) =>
+            index.name === "idx_investigator_timeline_events_dossier_occurred_at",
+        )
+      ) {
+        throw new Error("investigator timeline occurred_at index missing");
+      }
+      if (
+        !indexes.some(
+          (index) =>
+            index.name === "idx_investigator_timeline_events_dossier_event_type",
+        )
+      ) {
+        throw new Error("investigator timeline event_type index missing");
+      }
+
+      migratedDb.close();
+    `;
+
+    execFileSync(
+      process.execPath,
+      ["--import", "tsx", "--input-type=module", "-e", script],
+      {
+        env: {
+          ...process.env,
+          DATA_DIR: tempDir,
+        },
+        stdio: "pipe",
+      },
+    );
+  });
+
   it("backfills legacy PDF rows as generated", async () => {
     tempDir = await mkdtemp(join(tmpdir(), "job-ops-migrate-"));
     const script = `

@@ -1502,6 +1502,70 @@ function rebuildPostApplicationTablesForO365(): void {
   }
 }
 
+// SQLite cannot ALTER CHECK constraints. Rebuild investigator_timeline_events
+// when it does not include newer event types.
+function rebuildInvestigatorTimelineEventsTable(): void {
+  if (!tableExists("investigator_timeline_events")) return;
+
+  const timelineTableSql = (
+    sqlite
+      .prepare(
+        `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`,
+      )
+      .get("investigator_timeline_events") as { sql?: string } | undefined
+  )?.sql;
+
+  const hasNewEventTypes =
+    typeof timelineTableSql === "string" &&
+    timelineTableSql.includes("'url_fetched'") &&
+    timelineTableSql.includes("'search_queried'");
+
+  if (hasNewEventTypes) return;
+
+  const foreignKeysPragma = sqlite.prepare("PRAGMA foreign_keys").get() as
+    | { foreign_keys?: number }
+    | undefined;
+  const foreignKeysWereEnabled =
+    Number(foreignKeysPragma?.foreign_keys ?? 1) === 1;
+
+  sqlite.exec("PRAGMA foreign_keys = OFF");
+  try {
+    sqlite.transaction(() => {
+      sqlite.exec("DROP TABLE IF EXISTS investigator_timeline_events_new");
+      sqlite.exec(`CREATE TABLE investigator_timeline_events_new (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+        dossier_id TEXT NOT NULL,
+        run_id TEXT,
+        event_type TEXT NOT NULL CHECK(event_type IN ('dossier_created','job_linked','run_started','run_completed','run_partial_failed','run_failed','source_saved','source_reviewed','person_saved','salary_saved','summary_saved','status_changed','dossier_merged','url_fetched','search_queried')),
+        payload TEXT NOT NULL,
+        occurred_at INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+      )`);
+      sqlite.exec(`INSERT OR REPLACE INTO investigator_timeline_events_new
+        (id, tenant_id, dossier_id, run_id, event_type, payload, occurred_at, created_at, updated_at)
+        SELECT id, tenant_id, dossier_id, run_id, event_type, payload, occurred_at, created_at, updated_at
+        FROM investigator_timeline_events`);
+      sqlite.exec("DROP TABLE IF EXISTS investigator_timeline_events");
+      sqlite.exec(
+        "ALTER TABLE investigator_timeline_events_new RENAME TO investigator_timeline_events",
+      );
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_investigator_timeline_events_dossier_occurred_at ON investigator_timeline_events(dossier_id, occurred_at)",
+      );
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_investigator_timeline_events_dossier_event_type ON investigator_timeline_events(dossier_id, event_type)",
+      );
+    })();
+  } finally {
+    sqlite.exec(
+      `PRAGMA foreign_keys = ${foreignKeysWereEnabled ? "ON" : "OFF"}`,
+    );
+  }
+}
+
 function ensureTracerLinksUniqueIndex(): void {
   if (!tableExists("tracer_links")) return;
 
@@ -1607,6 +1671,7 @@ console.log("🔐 Applying tenancy compatibility migrations...");
 ensureTenantColumns();
 rebuildSettingsTable();
 rebuildPostApplicationTablesForO365();
+rebuildInvestigatorTimelineEventsTable();
 ensureTracerLinksUniqueIndex();
 sqlite.exec(
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_tenant_key_unique ON settings(tenant_id, key)",
