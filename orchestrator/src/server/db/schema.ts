@@ -902,6 +902,7 @@ export const investigatorDossiers = sqliteTable(
       .default("active"),
     tags: text("tags", { mode: "json" }).$type<string[]>(),
     lastResearchedAt: integer("last_researched_at", { mode: "number" }),
+    archivedAt: text("archived_at"),
     createdFromJobId: text("created_from_job_id"),
     createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
     updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),

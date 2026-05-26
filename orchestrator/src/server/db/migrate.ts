@@ -67,6 +67,9 @@ const pipelineRunsHasConfigSnapshot = tableHasColumn(
 const pipelineRunsHasTenantId = tableHasColumn("pipeline_runs", "tenant_id");
 const jobsHasPdfRegenerating = tableHasColumn("jobs", "pdf_regenerating");
 const jobsHasJobBrief = tableHasColumn("jobs", "job_brief");
+const shouldAddInvestigatorDossiersArchivedAt =
+  tableExists("investigator_dossiers") &&
+  !tableHasColumn("investigator_dossiers", "archived_at");
 const watchlistJobStatesHasUserId = tableHasColumn(
   "watchlist_job_states",
   "user_id",
@@ -1065,6 +1068,7 @@ const migrations = [
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','watchlist','interviewing','archived','declined')),
     tags TEXT,
     last_researched_at INTEGER,
+    archived_at TEXT,
     created_from_job_id TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -1204,6 +1208,9 @@ const migrations = [
   `CREATE INDEX IF NOT EXISTS idx_investigator_summaries_dossier_summary_type ON investigator_summaries(dossier_id, summary_type)`,
   `CREATE INDEX IF NOT EXISTS idx_investigator_timeline_events_dossier_occurred_at ON investigator_timeline_events(dossier_id, occurred_at)`,
   `CREATE INDEX IF NOT EXISTS idx_investigator_timeline_events_dossier_event_type ON investigator_timeline_events(dossier_id, event_type)`,
+  ...(shouldAddInvestigatorDossiersArchivedAt
+    ? [`ALTER TABLE investigator_dossiers ADD COLUMN archived_at TEXT`]
+    : []),
 ];
 
 console.log("🔧 Running database migrations...");
