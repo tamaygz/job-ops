@@ -3,13 +3,20 @@ import { _resetTracerReadinessCache } from "@client/hooks/useTracerReadiness";
 import { renderWithQueryClient } from "@client/test/renderWithQueryClient";
 import { getDefaultPromptTemplate } from "@shared/prompt-template-definitions.js";
 import { createAppSettings } from "@shared/testing/factories.js";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsPage } from "./index";
 
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+let logStreamHandlers:
+  | {
+      onOpen?: () => void;
+      onMessage: (payload: any) => void;
+      onError?: () => void;
+    }
+  | null = null;
 
 const render = (ui: Parameters<typeof renderWithQueryClient>[0]) =>
   renderWithQueryClient(ui);
@@ -47,6 +54,10 @@ vi.mock("../../api", () => ({
   disconnectCodexAuth: vi.fn(),
   updateSettings: vi.fn(),
   validateRxresume: vi.fn(),
+  subscribeToSettingsLogStream: vi.fn((handlers) => {
+    logStreamHandlers = handlers;
+    return vi.fn();
+  }),
   getRxResumeProjects: vi.fn(),
   clearDatabase: vi.fn(),
   deleteJobsByStatus: vi.fn(),
@@ -161,6 +172,11 @@ const openEnvironmentSection = async () => {
   await clickLastButtonByName(/workspace access/i);
 };
 
+const openLogsSection = async () => {
+  await openNavGroup(/^observability$/i);
+  await clickLastButtonByName(/^logs$/i);
+};
+
 const openScoringSection = async () => {
   await openNavGroup(/^scoring$/i);
   await clickLastButtonByName(/rules.*filters/i);
@@ -174,6 +190,7 @@ const openDangerZoneSection = async () => {
 describe("SettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    logStreamHandlers = null;
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
       configurable: true,
       value: vi.fn(),
@@ -233,6 +250,56 @@ describe("SettingsPage", () => {
       }),
     );
     expect(toast.success).toHaveBeenCalledWith("Settings saved");
+  });
+
+  it("renders the logs section with live updates and follow-output control", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
+
+    renderPage();
+    await openLogsSection();
+
+    expect(api.subscribeToSettingsLogStream).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/server log stream/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /clear view/i })).toBeVisible();
+
+    await act(async () => {
+      logStreamHandlers?.onOpen?.();
+      logStreamHandlers?.onMessage({
+        type: "snapshot",
+        entries: [
+          {
+            id: 1,
+            ts: "2026-05-25T18:00:00.000Z",
+            level: "info",
+            line: '{"msg":"snapshot line"}',
+            tenantId: null,
+          },
+        ],
+      });
+    });
+
+    expect(screen.getByText(/snapshot line/i)).toBeInTheDocument();
+    const scrollSpy = vi.mocked(HTMLElement.prototype.scrollIntoView);
+    const scrollCallsAfterSnapshot = scrollSpy.mock.calls.length;
+    expect(scrollCallsAfterSnapshot).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("switch", { name: /follow output/i }));
+
+    await act(async () => {
+      logStreamHandlers?.onMessage({
+        type: "log",
+        entry: {
+          id: 2,
+          ts: "2026-05-25T18:00:01.000Z",
+          level: "warn",
+          line: '{"msg":"live line"}',
+          tenantId: null,
+        },
+      });
+    });
+
+    expect(screen.getByText(/live line/i)).toBeInTheDocument();
+    expect(scrollSpy.mock.calls.length).toBe(scrollCallsAfterSnapshot);
   });
 
   it("saves investigator summary settings", async () => {

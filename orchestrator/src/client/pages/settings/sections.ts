@@ -14,6 +14,7 @@ export type SettingsSectionId =
   | "web-search"
   | "webhooks"
   | "tracer-links"
+  | "logs"
   | "environment"
   | "display"
   | "typst-style"
@@ -24,6 +25,7 @@ export type SettingsGroupId =
   | "ai"
   | "scoring"
   | "integrations"
+  | "observability"
   | "workspaces"
   | "display"
   | "backups"
@@ -120,6 +122,18 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
         label: "Tracer Links",
         description: "Public URL readiness and verification state.",
         searchTerms: ["public url", "verify", "readiness", "health"],
+      },
+    ],
+  },
+  {
+    id: "observability",
+    label: "Observability",
+    items: [
+      {
+        id: "logs",
+        label: "Logs",
+        description: "Live server log output with streaming updates.",
+        searchTerms: ["logs", "stdout", "console", "events", "debug"],
       },
     ],
   },
@@ -250,6 +264,7 @@ export const SECTION_FIELD_MAP: Record<
   ],
   webhooks: ["pipelineWebhookUrl", "jobCompleteWebhookUrl", "webhookSecret"],
   "tracer-links": [],
+  logs: [],
   environment: [
     "ukvisajobsEmail",
     "ukvisajobsPassword",

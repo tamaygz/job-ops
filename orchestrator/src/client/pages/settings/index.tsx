@@ -23,6 +23,7 @@ import { DangerZoneSection } from "@client/pages/settings/components/DangerZoneS
 import { DisplaySettingsSection } from "@client/pages/settings/components/DisplaySettingsSection";
 import { EnvironmentSettingsSection } from "@client/pages/settings/components/EnvironmentSettingsSection";
 import { InvestigatorSettingsSection } from "@client/pages/settings/components/InvestigatorSettingsSection";
+import { LogSettingsSection } from "@client/pages/settings/components/LogSettingsSection";
 import { ModelSettingsSection } from "@client/pages/settings/components/ModelSettingsSection";
 import { PromptTemplatesSection } from "@client/pages/settings/components/PromptTemplatesSection";
 import { ReactiveResumeSection } from "@client/pages/settings/components/ReactiveResumeSection";
@@ -1501,6 +1502,8 @@ export const SettingsPage: React.FC = () => {
           : tracerReadiness
             ? { label: "Check required", variant: "secondary" as const }
             : { label: "Not configured", variant: "secondary" as const };
+      case "logs":
+        return { label: "Live", variant: "secondary" as const };
       case "environment":
         return envSettings.readable.ukvisajobsEmail ||
           envSettings.readable.adzunaAppId
@@ -1531,6 +1534,7 @@ export const SettingsPage: React.FC = () => {
     (group) => group.items,
   ).filter((item) => sectionHasDirtyState(item.id)).length;
   const activeSectionIsDirty = sectionHasDirtyState(activeSection);
+  const showSettingsActions = activeSection !== "logs";
 
   let activeSectionContent: React.ReactNode;
   switch (activeSection) {
@@ -1639,6 +1643,9 @@ export const SettingsPage: React.FC = () => {
         />
       );
       break;
+    case "logs":
+      activeSectionContent = <LogSettingsSection layoutMode="panel" />;
+      break;
     case "environment":
       activeSectionContent = (
         <EnvironmentSettingsSection
@@ -1739,39 +1746,41 @@ export const SettingsPage: React.FC = () => {
                 : null
             }
             actions={
-              <>
-                {activeSectionIsDirty ? (
+              showSettingsActions ? (
+                <>
+                  {activeSectionIsDirty ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="whitespace-nowrap"
+                      onClick={handleDiscardChanges}
+                      disabled={isLoading || isSaving || !isDirty}
+                    >
+                      Discard changes
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
                     className="whitespace-nowrap"
-                    onClick={handleDiscardChanges}
-                    disabled={isLoading || isSaving || !isDirty}
+                    onClick={handleReset}
+                    disabled={isLoading || isSaving || !settings}
                   >
-                    Discard changes
+                    Reset to defaults
                   </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="whitespace-nowrap"
-                  onClick={handleReset}
-                  disabled={isLoading || isSaving || !settings}
-                >
-                  Reset to defaults
-                </Button>
-                <Button
-                  type="button"
-                  className="whitespace-nowrap"
-                  onClick={handleSubmit(onSave)}
-                  disabled={isLoading || isSaving || !canSave}
-                >
-                  {isSaving ? "Saving..." : "Save changes"}
-                </Button>
-              </>
+                  <Button
+                    type="button"
+                    className="whitespace-nowrap"
+                    onClick={handleSubmit(onSave)}
+                    disabled={isLoading || isSaving || !canSave}
+                  >
+                    {isSaving ? "Saving..." : "Save changes"}
+                  </Button>
+                </>
+              ) : null
             }
             footer={
-              Object.keys(errors).length > 0 ? (
+              showSettingsActions && Object.keys(errors).length > 0 ? (
                 <div className="rounded-xl border border-destructive/30 bg-destructive/[0.03] px-4 py-3 text-sm text-destructive">
                   Please fix the highlighted errors before saving.
                 </div>
