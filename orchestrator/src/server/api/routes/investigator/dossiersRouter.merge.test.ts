@@ -18,11 +18,9 @@ describe.sequential("Dossier Merge API", () => {
   let baseUrl: string;
   let closeDb: () => void;
   let tempDir: string;
-  let seededJobCounter = 0;
 
   beforeEach(async () => {
     ({ server, baseUrl, closeDb, tempDir } = await startServer());
-    seededJobCounter = 0;
   });
 
   afterEach(async () => {
@@ -69,9 +67,8 @@ describe.sequential("Dossier Merge API", () => {
   }
 
   async function seedJob(): Promise<string> {
-    seededJobCounter += 1;
     const now = new Date().toISOString();
-    const jobId = `merge-test-job-${seededJobCounter}`;
+    const jobId = `merge-test-job-${randomUUID()}`;
     const { db, schema } = await import("@server/db");
     await db.insert(schema.jobs).values({
       id: jobId,
