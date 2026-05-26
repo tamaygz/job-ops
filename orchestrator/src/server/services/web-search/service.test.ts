@@ -202,4 +202,24 @@ describe("web-search/service", () => {
       }),
     );
   });
+
+  it("records an outcome when a configured provider id is unknown", async () => {
+    const result = await runWebSearch("job ops", {
+      settings: {
+        ...defaultSettings,
+        providers: ["bing", "unknown-provider" as "bing"],
+      },
+    });
+
+    expect(result.failures).toContain(
+      "Unknown web search provider: unknown-provider",
+    );
+    expect(result.providerOutcomes).toContainEqual({
+      providerId: "unknown-provider",
+      displayName: "unknown-provider",
+      status: "failed",
+      resultCount: 0,
+      message: "Unknown web search provider: unknown-provider",
+    });
+  });
 });

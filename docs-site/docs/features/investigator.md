@@ -182,9 +182,9 @@ Research runs go through phases. Each phase uses specific providers to collect d
 | **People Scan** | ✓ | ✓ | — | ✓ |
 | **Dossier Refresh** | ✓ | ✓ | ✓ | ✓ |
 
-### Sources phase — the only external retrieval phase
+### Sources phase — the only non-LLM external retrieval phase
 
-The sources phase is the only phase that makes outbound network requests. It runs up to three providers in sequence:
+The sources phase is the only non-LLM phase that makes outbound network requests. It runs up to three providers in sequence:
 
 | Provider | ID | Retrieval mode | What it does | Timeline event |
 |---|---|---|---|---|
@@ -217,7 +217,7 @@ Generates AI summaries from accepted sources. Sends source excerpts to your conf
 
 ## Configuring web search
 
-Web search is the most powerful source provider, but it **requires API credentials** to work. Without credentials, every configured search provider is silently skipped and the run still completes — it just has fewer sources.
+Web search is the most powerful source provider, but it **requires API credentials** to work. Without credentials, every configured search provider is skipped and the run still completes — it just has fewer sources (with skip status visible in the `search_queried` event payload).
 
 ### Supported search providers
 
@@ -290,7 +290,7 @@ Some companies have limited public presence. A run with no results is not an err
 
 ### Research run shows no web search results
 
-Web search requires API credentials. Without them, all search providers are silently skipped and only company-site and linked-job providers contribute sources.
+Web search requires API credentials. Without them, all search providers are skipped and only company-site and linked-job providers contribute sources (you'll see the skip statuses in the `search_queried` event payload when that event is emitted).
 
 **Fix:** Go to **Settings → Web Search** and configure at least one provider with valid credentials. See the [Configuring web search](#configuring-web-search) section above. The easiest free option is self-hosting a SearXNG instance.
 

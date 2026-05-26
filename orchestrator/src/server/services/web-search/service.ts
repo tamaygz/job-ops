@@ -83,7 +83,15 @@ export async function runWebSearch(
   for (const providerId of providerIds) {
     const provider = webSearchProvidersById[providerId];
     if (!provider) {
-      failures.push(`Unknown web search provider: ${providerId}`);
+      const message = `Unknown web search provider: ${providerId}`;
+      failures.push(message);
+      providerOutcomes.push({
+        providerId,
+        displayName: String(providerId),
+        status: "failed",
+        resultCount: 0,
+        message,
+      });
       continue;
     }
 
