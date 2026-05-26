@@ -2,7 +2,6 @@ import { conflict, notFound } from "@infra/errors";
 import { logger } from "@infra/logger";
 import { sanitizeUnknown } from "@infra/sanitize";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import * as jobsRepo from "@server/repositories/jobs";
 import type {
   CreateInvestigatorDossierInput,
@@ -12,8 +11,10 @@ import type {
   InvestigatorDossierListItem,
   InvestigatorLinkedJob,
   LinkReason,
+  TimelineEventType,
   UpdateInvestigatorDossierInput,
 } from "@shared/types";
+import { writeEvent } from "./timelineService";
 import { extractNormalizedHostname } from "./urlUtils";
 
 const log = logger.child({ service: "dossierService" });
@@ -37,12 +38,15 @@ function nowSeconds(): number {
 
 async function writeTimelineEvent(input: {
   dossierId: string;
-  eventType: Parameters<typeof timelineRepo.insert>[0]["eventType"];
+  eventType: TimelineEventType;
   payload: Record<string, unknown>;
   occurredAt?: number;
   runId?: string | null;
 }): Promise<void> {
-  await timelineRepo.insert(input);
+  await writeEvent(input.dossierId, input.eventType, input.payload, {
+    occurredAt: input.occurredAt,
+    runId: input.runId,
+  });
 }
 
 export async function createDossier(

@@ -1,15 +1,31 @@
-import { notFound } from "@infra/errors";
+import { badRequest, notFound } from "@infra/errors";
 import { sanitizeUnknown } from "@infra/sanitize";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
-import type {
-  InvestigatorTimelineEvent,
+import { timelineRepository } from "@server/repositories/investigatorTimelineRepository";
+import {
+  type InvestigatorTimelineEvent,
   TimelineEventType,
+  type TimelineEventType as TimelineEventTypeName,
 } from "@shared/types";
+
+function assertTimelineEventType(
+  eventType: string,
+): asserts eventType is TimelineEventTypeName {
+  if (
+    !Object.values(TimelineEventType).includes(
+      eventType as TimelineEventTypeName,
+    )
+  ) {
+    throw badRequest("Invalid timeline event type", {
+      eventType,
+      allowedValues: Object.values(TimelineEventType),
+    });
+  }
+}
 
 export async function writeEvent(
   dossierId: string,
-  eventType: TimelineEventType,
+  eventType: TimelineEventTypeName | string,
   payload: Record<string, unknown>,
   opts?: { runId?: string | null; occurredAt?: number },
 ): Promise<void> {
@@ -19,8 +35,9 @@ export async function writeEvent(
   }
 
   const sanitized = sanitizeUnknown(payload) as Record<string, unknown>;
+  assertTimelineEventType(eventType);
 
-  await timelineRepo.insert({
+  await timelineRepository.insert({
     dossierId,
     runId: opts?.runId ?? null,
     eventType,
@@ -34,7 +51,7 @@ export async function listEvents(
   opts?: {
     limit?: number;
     before?: number;
-    eventType?: TimelineEventType;
+    eventType?: TimelineEventTypeName;
     runId?: string;
   },
 ): Promise<InvestigatorTimelineEvent[]> {
@@ -42,5 +59,5 @@ export async function listEvents(
   if (!dossier) {
     throw notFound("Dossier not found");
   }
-  return timelineRepo.findByDossier(dossierId, opts);
+  return timelineRepository.findByDossier(dossierId, opts);
 }

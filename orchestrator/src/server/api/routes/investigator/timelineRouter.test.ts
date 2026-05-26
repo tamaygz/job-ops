@@ -113,6 +113,23 @@ describe.sequential("Timeline API routes", () => {
     expect(data.length).toBeLessThanOrEqual(1);
   });
 
+  it("supports before cursor pagination", async () => {
+    const dossierId = await createDossier("Cursor Test Co");
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await startRun(dossierId);
+
+    const firstPage = await getTimeline(dossierId, "?limit=1");
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.data.length).toBe(1);
+
+    const cursor = firstPage.data[0]?.occurredAt;
+    const secondPage = await getTimeline(dossierId, `?before=${cursor}`);
+    expect(secondPage.status).toBe(200);
+    expect(secondPage.data.every((event) => event.occurredAt < cursor)).toBe(
+      true,
+    );
+  });
+
   it("returns 400 for invalid limit", async () => {
     const dossierId = await createDossier("Bad Limit Co");
     const res = await fetch(dossiersUrl(`/${dossierId}/timeline?limit=999`));

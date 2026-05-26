@@ -3,13 +3,13 @@ import { logger } from "@infra/logger";
 import { getJobQueue } from "@server/infra/job-queue-registry";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as runRepo from "@server/repositories/investigatorRunRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import { getActiveTenantId } from "@server/tenancy/context";
 import type {
   InvestigatorResearchRun,
   StartInvestigatorRunInput,
 } from "@shared/types";
 import { scheduleResearchRunWorker } from "./runWorker";
+import { writeEvent } from "./timelineService";
 
 const log = logger.child({ service: "runService" });
 
@@ -73,13 +73,12 @@ export async function startRun(
     );
   }
 
-  await timelineRepo.insertEvent({
+  await writeEvent(
     dossierId,
-    runId: run.id,
-    eventType: "run_started",
-    payload: { runKind: input.runKind, runId: run.id },
-    occurredAt: nowSeconds(),
-  });
+    "run_started",
+    { runKind: input.runKind, runId: run.id },
+    { runId: run.id, occurredAt: nowSeconds() },
+  );
 
   log.info("Research run started", {
     dossierId,
@@ -118,13 +117,12 @@ export async function cancelRun(
   }
 
   // No run_cancelled event type defined in v1; record via run_failed with user_cancelled reason
-  await timelineRepo.insertEvent({
+  await writeEvent(
     dossierId,
-    runId,
-    eventType: "run_failed",
-    payload: { runKind: run.runKind, runId, reason: "user_cancelled" },
-    occurredAt: nowSeconds(),
-  });
+    "run_failed",
+    { runKind: run.runKind, runId, reason: "user_cancelled" },
+    { runId, occurredAt: nowSeconds() },
+  );
 
   log.info("Research run cancelled", { dossierId, runId });
   return updated;

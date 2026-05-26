@@ -7,6 +7,10 @@ vi.mock("@server/repositories/investigatorDossierRepository", () => ({
 vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
   insert: vi.fn(),
   findByDossier: vi.fn(),
+  timelineRepository: {
+    insert: vi.fn(),
+    findByDossier: vi.fn(),
+  },
 }));
 
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
@@ -38,13 +42,16 @@ describe("timelineService", () => {
 
   it("sanitizes sensitive payload fields before writing a timeline event", async () => {
     vi.mocked(dossierRepo.findById).mockResolvedValue(makeDossier());
+    vi.mocked(timelineRepo.timelineRepository.insert).mockResolvedValue(
+      undefined,
+    );
 
     await writeEvent("dossier-1", "summary_saved", {
       accessToken: "secret-value",
       companyName: "Acme",
     });
 
-    expect(timelineRepo.insert).toHaveBeenCalledWith(
+    expect(timelineRepo.timelineRepository.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: {
           accessToken: "[REDACTED]",
@@ -64,12 +71,25 @@ describe("timelineService", () => {
 
   it("forwards run-scoped filters when listing events", async () => {
     vi.mocked(dossierRepo.findById).mockResolvedValue(makeDossier());
-    vi.mocked(timelineRepo.findByDossier).mockResolvedValue([]);
+    vi.mocked(timelineRepo.timelineRepository.findByDossier).mockResolvedValue(
+      [],
+    );
 
     await listEvents("dossier-1", { runId: "run-1" });
 
-    expect(timelineRepo.findByDossier).toHaveBeenCalledWith("dossier-1", {
-      runId: "run-1",
-    });
+    expect(timelineRepo.timelineRepository.findByDossier).toHaveBeenCalledWith(
+      "dossier-1",
+      {
+        runId: "run-1",
+      },
+    );
+  });
+
+  it("rejects invalid runtime timeline event types", async () => {
+    vi.mocked(dossierRepo.findById).mockResolvedValue(makeDossier());
+
+    await expect(
+      writeEvent("dossier-1", "invalid_event_type", {}),
+    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
   });
 });

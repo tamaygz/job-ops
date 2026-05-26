@@ -17,8 +17,8 @@ vi.mock("@server/repositories/investigatorSummaryRepository", () => ({
   create: vi.fn(),
 }));
 
-vi.mock("@server/repositories/investigatorTimelineRepository", () => ({
-  insertEvent: vi.fn(),
+vi.mock("./timelineService", () => ({
+  writeEvent: vi.fn(),
 }));
 
 vi.mock("@server/services/modelSelection", () => ({
@@ -29,7 +29,6 @@ vi.mock("@server/services/modelSelection", () => ({
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as sourceRepo from "@server/repositories/investigatorSourceRepository";
 import * as summaryRepo from "@server/repositories/investigatorSummaryRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import * as settingsRepo from "@server/repositories/settings";
 import {
   buildSummaryPrompt,
@@ -40,6 +39,7 @@ import {
   resolveLlmModel,
 } from "@server/services/modelSelection";
 import type { InvestigatorSource, InvestigatorSummary } from "@shared/types";
+import * as timelineService from "./timelineService";
 
 describe("investigator summaryService", () => {
   afterEach(() => {
@@ -147,7 +147,7 @@ describe("investigator summaryService", () => {
       updatedAt: "",
     };
     vi.mocked(summaryRepo.create).mockResolvedValue(createdSummary);
-    vi.mocked(timelineRepo.insertEvent).mockResolvedValue(undefined);
+    vi.mocked(timelineService.writeEvent).mockResolvedValue(undefined);
     vi.mocked(resolveLlmModel).mockResolvedValue("test-model");
 
     const callJson = vi.fn().mockResolvedValue({

@@ -3,7 +3,6 @@ import { sanitizeUnknown } from "@infra/sanitize";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as sourceRepo from "@server/repositories/investigatorSourceRepository";
 import * as summaryRepo from "@server/repositories/investigatorSummaryRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import * as settingsRepo from "@server/repositories/settings";
 import {
   createConfiguredLlmService,
@@ -22,6 +21,7 @@ import type {
   SummaryType,
 } from "@shared/types";
 import type { JsonSchemaDefinition } from "../llm/types";
+import { writeEvent } from "./timelineService";
 
 const SUMMARY_TITLE: Record<SummaryType, string> = {
   company_brief: "Company Brief",
@@ -203,13 +203,12 @@ export async function regenerateSummary(
     version,
   });
 
-  await timelineRepo.insertEvent({
+  await writeEvent(
     dossierId,
-    runId: runId ?? null,
-    eventType: "summary_saved",
-    payload: { summaryId: summary.id, generationFailed },
-    occurredAt: Math.floor(Date.now() / 1000),
-  });
+    "summary_saved",
+    { summaryId: summary.id, generationFailed },
+    { runId: runId ?? null, occurredAt: Math.floor(Date.now() / 1000) },
+  );
 
   return summary;
 }
@@ -227,13 +226,12 @@ export async function editSummary(
   });
   if (!updated) throw notFound("Summary not found after update");
 
-  await timelineRepo.insertEvent({
-    dossierId: existing.dossierId,
-    runId: null,
-    eventType: "summary_saved",
-    payload: { summaryId, editedByUser: true },
-    occurredAt: Math.floor(Date.now() / 1000),
-  });
+  await writeEvent(
+    existing.dossierId,
+    "summary_saved",
+    { summaryId, editedByUser: true },
+    { runId: null, occurredAt: Math.floor(Date.now() / 1000) },
+  );
 
   return updated;
 }

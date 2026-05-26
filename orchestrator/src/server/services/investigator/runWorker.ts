@@ -5,9 +5,9 @@ import type { InvestigatorResearchRunJobPayload } from "@server/infra/job-queue"
 import { getJobQueue } from "@server/infra/job-queue-registry";
 import * as dossierRepo from "@server/repositories/investigatorDossierRepository";
 import * as runRepo from "@server/repositories/investigatorRunRepository";
-import * as timelineRepo from "@server/repositories/investigatorTimelineRepository";
 import { runInvestigatorPhases } from "./gather/runPhases";
 import { notifyRunProgress } from "./runProgress";
+import { writeEvent } from "./timelineService";
 
 const log = logger.child({ service: "runWorker" });
 
@@ -145,17 +145,14 @@ async function processQueuedRun(
           lastResearchedAt: completedAt,
         });
 
-        await timelineRepo.insertEvent({
-          dossierId: payload.dossierId,
-          runId: payload.runId,
-          eventType:
-            failures.length > 0 ? "run_partial_failed" : "run_completed",
-          payload:
-            failures.length > 0
-              ? { runKind: payload.runKind, runId: payload.runId, failures }
-              : { runKind: payload.runKind, runId: payload.runId },
-          occurredAt: completedAt,
-        });
+        await writeEvent(
+          payload.dossierId,
+          failures.length > 0 ? "run_partial_failed" : "run_completed",
+          failures.length > 0
+            ? { runKind: payload.runKind, runId: payload.runId, failures }
+            : { runKind: payload.runKind, runId: payload.runId },
+          { runId: payload.runId, occurredAt: completedAt },
+        );
 
         log.info("Research run completed", {
           runId: payload.runId,
@@ -189,18 +186,17 @@ async function processQueuedRun(
           message: errorMessage,
         });
 
-        await timelineRepo.insertEvent({
-          dossierId: payload.dossierId,
-          runId: payload.runId,
-          eventType: "run_failed",
-          payload: {
+        await writeEvent(
+          payload.dossierId,
+          "run_failed",
+          {
             runKind: payload.runKind,
             runId: payload.runId,
             errorCode,
             errorMessage,
           },
-          occurredAt: failedAt,
-        });
+          { runId: payload.runId, occurredAt: failedAt },
+        );
 
         log.error("Research run failed", {
           runId: payload.runId,
