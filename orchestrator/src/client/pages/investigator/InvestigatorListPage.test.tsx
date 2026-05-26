@@ -73,7 +73,7 @@ describe("InvestigatorListPage", () => {
     });
   });
 
-  it("renders the empty state and updates search filters", () => {
+  it("renders the empty state and updates search and tag filters", () => {
     mocks.useDossiers.mockReturnValue({ data: [], isLoading: false });
 
     renderPage();
@@ -83,9 +83,12 @@ describe("InvestigatorListPage", () => {
     fireEvent.change(screen.getByPlaceholderText(/search companies/i), {
       target: { value: "Acme" },
     });
+    fireEvent.change(screen.getByPlaceholderText(/^tag$/i), {
+      target: { value: "fintech" },
+    });
 
     expect(mocks.useDossiers).toHaveBeenLastCalledWith(
-      expect.objectContaining({ q: "Acme" }),
+      expect.objectContaining({ q: "Acme", tag: "fintech" }),
     );
   });
 

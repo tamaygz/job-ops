@@ -228,11 +228,13 @@ export const InvestigatorListPage: React.FC = () => {
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [tag, setTag] = useState("");
   const [statusFilter, setStatusFilter] = useState<DossierStatus | "">("");
   const [staleFilter, setStaleFilter] = useState(false);
 
   const filters: InvestigatorDossierListFilters = {
     q: q.trim() || undefined,
+    tag: tag.trim() || undefined,
     status: statusFilter || undefined,
     stale: staleFilter || undefined,
   };
@@ -264,6 +266,12 @@ export const InvestigatorListPage: React.FC = () => {
               className="pl-8 h-8 text-sm"
             />
           </div>
+          <Input
+            placeholder="Tag"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+            className="h-8 w-32 text-sm"
+          />
           <Select
             value={statusFilter || ALL_STATUSES}
             onValueChange={(v) =>
