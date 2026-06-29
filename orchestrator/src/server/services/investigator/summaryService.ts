@@ -41,6 +41,9 @@ type InvestigatorSummarySettings = {
   systemPromptTemplate: string;
 };
 
+const MAX_PROMPT_SOURCE_LIMIT = 10;
+const MAX_PROMPT_EXCERPT_MAX_CHARS = 500;
+
 const SUMMARY_SCHEMA: JsonSchemaDefinition = {
   name: "investigator_summary",
   schema: {
@@ -103,21 +106,33 @@ export function buildSummaryPrompt(
     "excerptMaxChars" | "sourceLimit"
   > = DEFAULT_SUMMARY_SETTINGS,
   researchQuestion?: string | null,
+  context?: { industry?: string | null; notes?: string | null },
 ): string {
   const typeName = summaryType.replace(/_/g, " ");
+  const sourceLimit = Math.max(
+    0,
+    Math.min(options.sourceLimit, MAX_PROMPT_SOURCE_LIMIT),
+  );
+  const excerptMaxChars = Math.max(
+    1,
+    Math.min(options.excerptMaxChars, MAX_PROMPT_EXCERPT_MAX_CHARS),
+  );
+  const industry = context?.industry?.trim() || "Not provided";
+  const notes = context?.notes?.trim() || "Not provided";
   const header = `Generate a ${typeName} for ${companyName}${companyUrl ? ` (${companyUrl})` : ""}.`;
+  const companyContext = `## Company Context\n- Name: ${companyName}\n- Industry: ${industry}\n- Notes: ${notes}`;
   const questionSection = researchQuestion
     ? `\n\n## Driving Research Question\n${researchQuestion}\n\nPrioritise answering this question in your analysis while still covering the general ${typeName}.`
     : "";
   const excerpts = sources
-    .slice(0, options.sourceLimit)
+    .slice(0, sourceLimit)
     .map(
       (s, i) =>
-        `[${i + 1}] ${s.title}: ${s.capturedExcerpt.slice(0, options.excerptMaxChars)}`,
+        `[${i + 1}] (${s.reviewState}) ${s.title}: ${s.capturedExcerpt.slice(0, excerptMaxChars)}`,
     )
     .join("\n\n");
 
-  return `${header}${questionSection}\n\n## Sources\n${excerpts || "No sources available."}`;
+  return `${header}\n\n${companyContext}${questionSection}\n\n## Sources\n${excerpts || "No sources available."}`;
 }
 
 export async function regenerateSummary(
@@ -128,6 +143,11 @@ export async function regenerateSummary(
 ): Promise<InvestigatorSummary> {
   const dossier = await dossierRepo.findById(dossierId);
   if (!dossier) throw notFound("Dossier not found");
+  const dossierRecord = dossier as Record<string, unknown>;
+  const industry =
+    typeof dossierRecord.industry === "string" ? dossierRecord.industry : null;
+  const notes =
+    typeof dossierRecord.notes === "string" ? dossierRecord.notes : null;
 
   const allSources = await sourceRepo.findByDossier(dossierId);
   const sources = allSources.filter(
@@ -145,6 +165,7 @@ export async function regenerateSummary(
     summaryType,
     summarySettings,
     researchQuestion,
+    { industry, notes },
   );
 
   let bodyMarkdown = "(Generation failed)";

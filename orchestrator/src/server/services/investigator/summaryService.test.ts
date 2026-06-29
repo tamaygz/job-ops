@@ -224,4 +224,98 @@ describe("investigator summaryService", () => {
     );
     expect(promptWithoutQuestion).not.toContain("## Driving Research Question");
   });
+
+  it("caps prompt source and excerpt settings at required maximums", () => {
+    const sources = Array.from({ length: 12 }, (_, i) => ({
+      id: `source-${i + 1}`,
+      tenantId: "tenant-1",
+      dossierId: "dossier-1",
+      runId: null,
+      sourceType: "other_web_page",
+      title: `Source ${i + 1}`,
+      url: null,
+      sourceHost: null,
+      capturedExcerpt: "A".repeat(700),
+      retrievedAt: 0,
+      reviewState: "verified",
+      reviewerNote: null,
+      contentHash: null,
+      createdAt: "",
+      updatedAt: "",
+    })) as InvestigatorSource[];
+
+    const prompt = buildSummaryPrompt(
+      "Acme",
+      null,
+      sources,
+      "company_brief",
+      {
+        sourceLimit: 25,
+        excerptMaxChars: 900,
+      },
+    );
+
+    expect(prompt).toContain("[10]");
+    expect(prompt).not.toContain("[11]");
+    expect(prompt).not.toContain("A".repeat(501));
+  });
+
+  it("gracefully falls back when parsed LLM summary payload is invalid", async () => {
+    vi.mocked(settingsRepo.getSetting).mockResolvedValue(null);
+    vi.mocked(dossierRepo.findById).mockResolvedValue({
+      id: "dossier-1",
+      tenantId: "tenant-1",
+      companyName: "Acme",
+      canonicalCompanyKey: "acme",
+      companyUrl: null,
+      normalizedDomain: null,
+      status: "active",
+      tags: [],
+      lastResearchedAt: null,
+      createdFromJobId: null,
+      createdAt: "",
+      updatedAt: "",
+    });
+    vi.mocked(sourceRepo.findByDossier).mockResolvedValue([]);
+    vi.mocked(summaryRepo.findLatest).mockResolvedValue(null);
+    vi.mocked(summaryRepo.create).mockResolvedValue({
+      id: "summary-1",
+      tenantId: "tenant-1",
+      dossierId: "dossier-1",
+      runId: null,
+      summaryType: "company_brief",
+      title: "Company Brief",
+      bodyMarkdown: "(Generation failed)",
+      factsJson: [],
+      hypothesesJson: [],
+      reviewState: "draft",
+      version: 1,
+      createdAt: "",
+      updatedAt: "",
+    });
+    vi.mocked(timelineRepo.insertEvent).mockResolvedValue(undefined);
+    vi.mocked(resolveLlmModel).mockResolvedValue("test-model");
+    vi.mocked(createConfiguredLlmService).mockResolvedValue({
+      callJson: vi.fn().mockResolvedValue({
+        success: true,
+        data: { summary: 123, facts: "invalid", hypotheses: null },
+      }),
+    } as unknown as Awaited<ReturnType<typeof createConfiguredLlmService>>);
+
+    await regenerateSummary("dossier-1", "company_brief");
+
+    expect(summaryRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bodyMarkdown: "(Generation failed)",
+        factsJson: [],
+        hypothesesJson: [],
+      }),
+    );
+    expect(timelineRepo.insertEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "summary_saved",
+        payload: expect.objectContaining({ generationFailed: true }),
+      }),
+    );
+  });
 });
